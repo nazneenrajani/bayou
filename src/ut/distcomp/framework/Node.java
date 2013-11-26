@@ -1,6 +1,5 @@
 package ut.distcomp.framework;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class Node extends Process{
 		//TODO: remove logs that are stable
 	}
 
-	public void anti_entropy(Node node){
+	public void anti_entropy(ProcessId R, HashMap<Integer,Integer> versionVector, int csn){
 		//TODO: gossip protocol
 
 	}
@@ -36,9 +35,16 @@ public class Node extends Process{
 	}
 	@Override
 	void body() {
-		//for
-		//sendMessage(me, new askAntiEntropyInfo());
-
+		for(ProcessId nodeid: env.Nodes.nodes){
+			sendMessage(nodeid, new askAntiEntropyInfo(me));
+		}
+		while(true){
+			BayouMessage m = getNextMessage();
+			if(m instanceof sendAntiEntropyInfo){
+				sendAntiEntropyInfo msg = (sendAntiEntropyInfo) m;
+				anti_entropy(msg.src,msg.versionVector,msg.CSN);
+			}
+		}
 
 	}
 }

@@ -10,7 +10,7 @@ public class Env {
 	static Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
 	static NodeList Nodes;
 
-	synchronized static void sendMessage(ProcessId dst, PaxosMessage msg){
+	synchronized static void sendMessage(ProcessId dst, BayouMessage msg){
 		Process p = procs.get(dst);
 		if (p != null) {
 			p.deliver(msg);

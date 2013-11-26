@@ -2,7 +2,7 @@ package ut.distcomp.framework;
 
 public abstract class Process extends Thread {
 	ProcessId me;
-	Queue<PaxosMessage> inbox = new Queue<PaxosMessage>();
+	Queue<BayouMessage> inbox = new Queue<BayouMessage>();
 	Env env;
 
 	abstract void body();
@@ -12,15 +12,15 @@ public abstract class Process extends Thread {
 		env.removeProc(me);
 	}
 
-	PaxosMessage getNextMessage(){
+	BayouMessage getNextMessage(){
 		return inbox.bdequeue();
 	}
 
-	void sendMessage(ProcessId dst, PaxosMessage msg){
+	void sendMessage(ProcessId dst, BayouMessage msg){
 		env.sendMessage(dst, msg);
 	}
 
-	void deliver(PaxosMessage msg){
+	void deliver(BayouMessage msg){
 		inbox.enqueue(msg);
 	}
 }
