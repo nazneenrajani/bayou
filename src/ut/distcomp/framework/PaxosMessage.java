@@ -5,6 +5,12 @@ import java.util.*;
 public class PaxosMessage {
 	ProcessId src;
 }
+
+class UpdateMessage extends PaxosMessage{
+
+}
+class PrintLogMessage extends PaxosMessage{
+}
 class askAntiEntropyInfo extends PaxosMessage{
 	askAntiEntropyInfo(ProcessId src) {
 		this.src=src;
