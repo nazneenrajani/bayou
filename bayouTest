@@ -1,0 +1,14 @@
+join(1)
+join(2)
+join(3)
+breakConnection(1,2)
+update(1,client1,add(songName,songUrl))
+delay(1000)
+isolate(3) 
+update(3,client2,add(songName1,songUrl1))
+remove(3)
+update(2,client3,add(songName2,songUrl2))
+recoverConnection(1,2)
+printLog(3)
+printAllLogs
+pause

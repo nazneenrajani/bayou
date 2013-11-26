@@ -3,15 +3,14 @@ package ut.distcomp.framework;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Node extends Thread{
+public class Node extends Process{
 	int node_id;
-	List<updates> log;
-	static PlayList db;
-	static List<Boolean> connections;
+	//List<updates> log;
+	static ConnectionMatrix connections;
 	
-	public Node(int nodeId){
+	public Node(int nodeId, ConnectionMatrix connections){
 		this.node_id=nodeId;
-		connections=new ArrayList<Boolean>();
+		this.connections=connections;
 	}
 	
 	public void add_entry(){
@@ -28,5 +27,11 @@ public class Node extends Thread{
 	
 	public void retire(){
 		//TODO: transfer db and leave
+	}
+
+	@Override
+	void body() {
+		// TODO Auto-generated method stub
+		
 	}
 }
