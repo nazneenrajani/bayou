@@ -1,12 +1,16 @@
 package ut.distcomp.framework;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class Node extends Thread{
+public class Node extends Process{
 	int node_id;
-	List<updates> log;
-	static PlayList db;
+	int CSN; 
+	Map<Integer,Integer> version_vector = new HashMap<Integer,Integer>();
+	List<Write> log;
+	PlayList db;
 	static List<Boolean> connections;
 	
 	public Node(int nodeId){
@@ -24,9 +28,18 @@ public class Node extends Thread{
 	
 	public void anti_entropy(Node node){
 		//TODO: gossip protocol
+		
 	}
 	
 	public void retire(){
 		//TODO: transfer db and leave
 	}
+	@Override
+	void body() {
+		//for
+		//sendMessage(me, new askAntiEntropyInfo());
+		
+		
+	}
+	
 }
