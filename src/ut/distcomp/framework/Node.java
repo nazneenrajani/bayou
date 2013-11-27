@@ -29,10 +29,10 @@ public class Node extends Process{
 		//TODO: add to log, called by controller
 	}
 
-	public void truncate_log(PlayList currentPL, HashMap versionVector){
+	public void truncate_log(PlayList currentPL, HashMap<Integer,Integer> versionVector){
 		//TODO: remove logs that are stable
-		 old_db = currentPL;
-		 older_version_vector=version_vector;
+		old_db = currentPL;
+		older_version_vector=version_vector;
 	}
 
 	public void anti_entropy(ProcessId R, HashMap<Integer,Integer> versionVector, int csn){
@@ -81,6 +81,45 @@ public class Node extends Process{
 			if(m instanceof sendAntiEntropyInfo){
 				sendAntiEntropyInfo msg = (sendAntiEntropyInfo) m;
 				anti_entropy(msg.src,msg.versionVector,msg.CSN);
+			}
+			else if(m instanceof askAntiEntropyInfo){
+				askAntiEntropyInfo msg = (askAntiEntropyInfo) m;
+				sendMessage(msg.src, new sendAntiEntropyInfo(me, version_vector, CSN));
+			}
+			else if(m instanceof sendCommitNotification){
+				sendCommitNotification msg = (sendCommitNotification) m;
+				removeTentative(msg.accept_stamp,msg.serverID,msg.CSN);
+			}
+			else if(m instanceof sendWrite){
+				sendWrite msg = (sendWrite) m;
+				tentativeWrite.add(msg.w);
+			}
+			else if(m instanceof sendDB){
+				sendDB msg = (sendDB) m;
+				//TODO: merge dbs
+			}
+			else if(m instanceof sendVector){
+				sendVector msg = (sendVector) m;
+				older_version_vector=msg.vv;
+			}
+			else if(m instanceof sendCSN){
+				sendCSN msg = (sendCSN) m;
+				CSN=msg.CSN;
+			}
+		}
+
+	}
+
+	private void removeTentative(int accept_stamp, int serverID, int csn) {
+		Iterator<Write> it = tentativeWrite.iterator(); 
+		while(it.hasNext()){
+			Write tw = it.next();
+			if(tw.accept_stamp==accept_stamp){
+				if(tw.serverID==serverID){
+					committedWrite.add(new Write(serverID,accept_stamp,csn,tw.command));
+					it.remove();
+				}
+
 			}
 		}
 

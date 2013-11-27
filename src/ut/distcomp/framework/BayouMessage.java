@@ -18,7 +18,7 @@ class askAntiEntropyInfo extends BayouMessage{
 }
 class sendAntiEntropyInfo extends BayouMessage{
 	HashMap<Integer, Integer> versionVector; int CSN;
-	sendAntiEntropyInfo(ProcessId src,HashMap<Integer, Integer> versionVector,int csn) {
+	sendAntiEntropyInfo(ProcessId src,Map<Integer, Integer> version_vector,int csn) {
 		this.src=src;
 	}
 }
