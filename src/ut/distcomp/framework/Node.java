@@ -31,10 +31,10 @@ public class Node extends Process{
 		//TODO: add to log, called by controller
 	}
 
-	public void truncate_log(PlayList currentPL, HashMap versionVector){
+	public void truncate_log(PlayList currentPL, HashMap<Integer,Integer> versionVector){
 		//TODO: remove logs that are stable
-		 old_db = currentPL;
-		 older_version_vector=version_vector;
+		old_db = currentPL;
+		older_version_vector=version_vector;
 	}
 
 	public void anti_entropy(ProcessId R, HashMap<Integer,Integer> versionVector, int csn){
@@ -92,7 +92,8 @@ public class Node extends Process{
 				anti_entropy(msg.src,msg.versionVector,msg.CSN);
 			}
 			else if(m instanceof askAntiEntropyInfo){
-				//TODO send my info
+				askAntiEntropyInfo msg = (askAntiEntropyInfo) m;
+				sendMessage(msg.src, new sendAntiEntropyInfo(me, version_vector, CSN));
 			}
 			else if(m instanceof RetireMessage){
 				retire();
@@ -103,8 +104,43 @@ public class Node extends Process{
 			else if(m instanceof UpdateMessage){
 				//TODO make write. Put timestamp
 			}
+			else if(m instanceof sendCommitNotification){
+				sendCommitNotification msg = (sendCommitNotification) m;
+				removeTentative(msg.accept_stamp,msg.serverID,msg.CSN);
+			}
+			else if(m instanceof sendWrite){
+				sendWrite msg = (sendWrite) m;
+				version_vector.put(Integer.parseInt(msg.src.name), msg.w.accept_stamp);
+				tentativeWrite.add(msg.w);
+			}
+			else if(m instanceof sendDB){
+				sendDB msg = (sendDB) m;
+				//TODO: merge dbs
+			}
+			else if(m instanceof sendVector){
+				sendVector msg = (sendVector) m;
+				older_version_vector=msg.vv;
+			}
+			else if(m instanceof sendCSN){
+				sendCSN msg = (sendCSN) m;
+				CSN=msg.CSN;
+			}
 		}
 		env.Nodes.remove(node_id); //TODO rename node_id to my_id
 		env.connections.isolate(node_id);
+	}
+
+	private void removeTentative(int accept_stamp, int serverID, int csn) {
+		Iterator<Write> it = tentativeWrite.iterator(); 
+		while(it.hasNext()){
+			Write tw = it.next();
+			if(tw.accept_stamp==accept_stamp){
+				if(tw.serverID==serverID){
+					committedWrite.add(new Write(serverID,accept_stamp,csn,tw.command));
+					it.remove();
+				}
+
+			}
+		}
 	}
 }

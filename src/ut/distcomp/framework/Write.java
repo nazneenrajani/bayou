@@ -3,13 +3,13 @@ package ut.distcomp.framework;
 public class Write {
 	int serverID;
 	int accept_stamp;
-	int CSN;
+	int CSN=-1;
 	String command;
 
-	public Write(int id, int accept_stamp, String command){
+	public Write(int id, int accept_stamp, int csn, String command){
 		this.serverID=id;
 		this.accept_stamp=accept_stamp;
-		this.CSN=-1;
+		this.CSN=csn;
 		this.command=command;
 	}
 	public int compareTo(Write c) {
