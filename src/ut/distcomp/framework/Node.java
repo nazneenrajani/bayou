@@ -15,10 +15,10 @@ public class Node extends Process{
 	Map<Integer,Integer> older_version_vector = new HashMap<Integer,Integer>();
 	Set<Write> tentativeWrite = new TreeSet<Write>();
 	Set<Write> committedWrite = new TreeSet<Write>();
-	//List<Write> log;
 	PlayList db;
-	PlayList old_db;	
+	PlayList old_db;
 	Boolean exitFlag = false;
+	//TODO isPrimary
 
 	public Node(Env env, ProcessId me, int nodeId){
 		this.node_id=nodeId;
@@ -50,7 +50,6 @@ public class Node extends Process{
 					else
 						sendMessage(R, new sendWrite(me, cw));
 				}
-
 			}
 		}
 		Iterator<Write> it = tentativeWrite.iterator(); 
@@ -92,11 +91,17 @@ public class Node extends Process{
 				sendAntiEntropyInfo msg = (sendAntiEntropyInfo) m;
 				anti_entropy(msg.src,msg.versionVector,msg.CSN);
 			}
+			else if(m instanceof askAntiEntropyInfo){
+				//TODO send my info
+			}
 			else if(m instanceof RetireMessage){
 				retire();
 			}
 			else if(m instanceof PrintLogMessage){
 				printLog();
+			}
+			else if(m instanceof UpdateMessage){
+				//TODO make write. Put timestamp
 			}
 		}
 		env.Nodes.remove(node_id); //TODO rename node_id to my_id
