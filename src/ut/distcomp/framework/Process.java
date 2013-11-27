@@ -17,7 +17,10 @@ public abstract class Process extends Thread {
 	}
 
 	void sendMessage(ProcessId dst, BayouMessage msg){
-		env.sendMessage(dst, msg);
+		if(env.connections.get(me,dst))
+			env.sendMessage(dst, msg);
+		else
+			deliver(new FailureToSendMessage(me,dst));
 	}
 
 	void deliver(BayouMessage msg){
