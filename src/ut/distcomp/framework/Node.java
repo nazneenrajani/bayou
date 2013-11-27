@@ -15,14 +15,16 @@ public class Node extends Process{
 	Map<Integer,Integer> older_version_vector = new HashMap<Integer,Integer>();
 	Set<Write> tentativeWrite = new TreeSet<Write>();
 	Set<Write> committedWrite = new TreeSet<Write>();
-	//List<Write> log;
 	PlayList db;
 	PlayList old_db;
-	static ConnectionMatrix connections;
+	Boolean exitFlag = false;
+	//TODO isPrimary
 
-	public Node(int nodeId, ConnectionMatrix connections){
+	public Node(Env env, ProcessId me, int nodeId){
 		this.node_id=nodeId;
-		this.connections=connections;
+		this.me = me;
+		this.env = env;
+		env.addProc(me, this);
 	}
 
 	public void add_entry(){
@@ -48,7 +50,6 @@ public class Node extends Process{
 					else
 						sendMessage(R, new sendWrite(me, cw));
 				}
-
 			}
 		}
 		Iterator<Write> it = tentativeWrite.iterator(); 
@@ -68,15 +69,23 @@ public class Node extends Process{
 	}
 
 	public void retire(){
+		//TODO stop accepting client requests
 		//TODO: transfer db and leave
+		exitFlag=true;
 	}
 
+	public void printLog(){
+		//TODO print log		
+	}
+	
 	@Override
 	void body() {
+		System.out.println("Here I am: " + me);
+		
 		for(ProcessId nodeid: env.Nodes.nodes){
 			sendMessage(nodeid, new askAntiEntropyInfo(me));
 		}
-		while(true){
+		while(!exitFlag){
 			BayouMessage m = getNextMessage();
 			if(m instanceof sendAntiEntropyInfo){
 				sendAntiEntropyInfo msg = (sendAntiEntropyInfo) m;
@@ -85,6 +94,15 @@ public class Node extends Process{
 			else if(m instanceof askAntiEntropyInfo){
 				askAntiEntropyInfo msg = (askAntiEntropyInfo) m;
 				sendMessage(msg.src, new sendAntiEntropyInfo(me, version_vector, CSN));
+			}
+			else if(m instanceof RetireMessage){
+				retire();
+			}
+			else if(m instanceof PrintLogMessage){
+				printLog();
+			}
+			else if(m instanceof UpdateMessage){
+				//TODO make write. Put timestamp
 			}
 			else if(m instanceof sendCommitNotification){
 				sendCommitNotification msg = (sendCommitNotification) m;
@@ -108,7 +126,8 @@ public class Node extends Process{
 				CSN=msg.CSN;
 			}
 		}
-
+		env.Nodes.remove(node_id); //TODO rename node_id to my_id
+		env.connections.isolate(node_id);
 	}
 
 	private void removeTentative(int accept_stamp, int serverID, int csn) {
@@ -123,6 +142,5 @@ public class Node extends Process{
 
 			}
 		}
-
 	}
 }

@@ -1,14 +1,14 @@
 package ut.distcomp.framework;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
-public class Env {
+public class Env {	
 	static Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
-	static NodeList Nodes;
+	NodeList Nodes;
+	ProcessId me= new ProcessId("env");
 
 	synchronized static void sendMessage(ProcessId dst, BayouMessage msg){
 		Process p = procs.get(dst);
@@ -26,48 +26,63 @@ public class Env {
 		procs.remove(pid);
 	}
 
-	void run(String[] args) throws IOException{
-		//TODO first spawn clients
+	int numClients=5;
+	ProcessId[] clients = new ProcessId[numClients];
+	int[] clientConnections = new int[numClients];
 
-		Nodes = new NodeList();
-		BufferedReader reader = new BufferedReader(new FileReader(args[0]));
+	int maxNodes=10;
+	ConnectionMatrix connections = new ConnectionMatrix(maxNodes);
+
+	void run(String[] args) throws IOException{
+		for(int i=0;i<numClients;i++)
+		{
+			clients[i]=new ProcessId("client:"+i);
+			clientConnections[i] = -1;
+			new Client(this,clients[i]);
+		}
+
+		Nodes = new NodeList(maxNodes);
 		String line = null;
-		while ((line = reader.readLine()) != null) {
+		BufferedReader bufferedReader = new BufferedReader(new FileReader(args[0]));
+		while ((line = bufferedReader.readLine()) != null) {
 			process(new InputCommand(line));   
-		}		
+		}
+		bufferedReader.close();
 	}
 
-	private static void process(InputCommand command) {
+	private void process(InputCommand command) {
 		System.out.println("processing "+command.command);
 		switch(command.command){
 		case "join":
-			Nodes.add(command.node1);
+			Nodes.add(command.nodeid);
+			connections.addNode(command.nodeid);
+			new Node(this,Nodes.nodes[command.nodeid],command.nodeid); 
 			break;
 		case "remove":
-			Nodes.remove(command.node1);
+			sendMessage(Nodes.getProcessId(command.nodeid), new RetireMessage(me));
 			break;
 		case "isolate":
-			Nodes.connections.isolate(command.node1);
+			connections.isolate(command.nodeid);
 			break;
 		case "reconnect":
-			Nodes.connections.reconnect(command.node1);
+			connections.reconnect(command.nodeid);
 			break;
 		case "breakConnection":
-			Nodes.connections.breakConnection(command.node1, command.node2);
+			connections.breakConnection(command.nodeid, command.nodeid2);
 			break;
 		case "recoverConnection":
-			Nodes.connections.recoverConnection(command.node1, command.node2);
+			connections.recoverConnection(command.nodeid, command.nodeid2);
 			break;
 		case "update":
-			sendMessage(Nodes.getProcessId(command.node1), new UpdateMessage()); //TODO make update message
+			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr)); //TODO make update message
 			break;
 		case "printLog":
-			sendMessage(Nodes.getProcessId(command.node1), new PrintLogMessage());
-			break;
-		case "printAllLogs":
-			for(ProcessId nodeid : Nodes.nodes){
-				sendMessage(nodeid, new PrintLogMessage());
-			}
+			if(command.nodeid!=null)
+				sendMessage(Nodes.getProcessId(command.nodeid), new PrintLogMessage(me));
+			else
+				for(ProcessId nodeid : Nodes.nodes){
+					sendMessage(nodeid, new PrintLogMessage(me));
+				}
 			break;
 		case "pause":
 			goToPrompt();
@@ -81,16 +96,22 @@ public class Env {
 				e.printStackTrace();
 			}
 			break;
+		case "clientConnect":
+			clientConnections[command.clientid] = command.nodeid;
+			break;
+		case "clientDisconnect":
+			clientConnections[command.clientid] = -1;
+			break;
 		default:
 			System.err.println("Unknown command. This should never happen");
 		}
 	}
 
-	private static void goToPrompt() {		
-		Scanner input = new Scanner (System.in );
+	private void goToPrompt() {		
+		Scanner input = new Scanner(System.in);
 
 		while(true){
-			System.out.println("Enter a command: ");
+			System.out.print("Enter a command: ");
 			InputCommand c = new InputCommand(input.next());
 			if(c.command.equals("continue")){
 				break;
@@ -99,15 +120,19 @@ public class Env {
 				process(c);
 			}
 		}
+		input.close();
 	}
 
 	public static void main(String[] args) throws IOException{
+		new Env().run(args);
+	}
+	
+	public Env(){
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
 				goToPrompt();
 			}
 		});
-		new Env().run(args);
 	}
 }

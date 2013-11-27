@@ -2,14 +2,22 @@ package ut.distcomp.framework;
 
 import java.util.*;
 
+//TODO arrange these according to the clients which handle them: Env, nodes, clients
+
 public class BayouMessage {
 	ProcessId src;
 }
 
 class UpdateMessage extends BayouMessage{
-
+	String updateStr;
+	UpdateMessage(ProcessId src, String updateStr){
+		this.src = src; this.updateStr = updateStr;
+	}
 }
 class PrintLogMessage extends BayouMessage{
+	PrintLogMessage(ProcessId src){
+		this.src = src;
+	}
 }
 class askAntiEntropyInfo extends BayouMessage{
 	askAntiEntropyInfo(ProcessId src) {
@@ -32,6 +40,22 @@ class sendWrite extends BayouMessage{
 	Write w;
 	sendWrite(ProcessId src, Write w){
 		this.src=src;this.w=w;
+	}
+}
+class FailureToSendMessage extends BayouMessage{
+	ProcessId dst;
+	public FailureToSendMessage(ProcessId src, ProcessId dst){
+		this.src = src; this.dst = dst;
+	}
+}
+class RetireMessage extends BayouMessage{
+	RetireMessage(ProcessId src){
+		this.src = src;
+	}
+}
+class ResponseMessage extends BayouMessage{
+	ResponseMessage(ProcessId src){
+		this.src = src;
 	}
 }
 class sendDB extends BayouMessage{
