@@ -8,6 +8,11 @@ public class BayouMessage {
 	ProcessId src;
 }
 
+class YouArePrimaryMessage extends BayouMessage{
+	YouArePrimaryMessage(ProcessId src){
+		this.src = src;
+	}
+}
 class UpdateMessage extends BayouMessage{
 	String updateStr;
 	UpdateMessage(ProcessId src, String updateStr){

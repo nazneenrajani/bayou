@@ -1,9 +1,7 @@
 package ut.distcomp.framework;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -15,31 +13,22 @@ public class Node extends Process{
 	Map<Integer,Integer> older_version_vector = new HashMap<Integer,Integer>();
 	Set<Write> tentativeWrite = new TreeSet<Write>();
 	Set<Write> committedWrite = new TreeSet<Write>();
-	PlayList db;
-	PlayList old_db;
 	Boolean exitFlag = false;
-	//TODO isPrimary
+	Boolean isPrimary = false;
 
 	public Node(Env env, ProcessId me, int nodeId){
 		this.node_id=nodeId;
 		this.me = me;
 		this.env = env;
 		env.addProc(me, this);
+		//TODO creation actions. Send a Creation write to everyone
 	}
 
 	public void add_entry(){
 		//TODO: add to log, called by controller
 	}
 
-	public void truncate_log(PlayList currentPL, HashMap<Integer,Integer> versionVector){
-		//TODO: remove logs that are stable
-		old_db = currentPL;
-		older_version_vector=version_vector;
-	}
-
 	public void anti_entropy(ProcessId R, HashMap<Integer,Integer> versionVector, int csn){
-		if(OSN>csn)
-			databaseTransfer(R);
 		if(csn<CSN){
 			Iterator<Write> it = committedWrite.iterator(); 
 			while(it.hasNext()){
@@ -61,13 +50,6 @@ public class Node extends Process{
 
 	}
 
-	private void databaseTransfer(ProcessId R) {
-		//TODO: roll back to previous state
-		sendMessage(R, new sendDB(me, old_db));
-		sendMessage(R, new sendVector(me, older_version_vector));
-		sendMessage(R, new sendCSN(me, CSN));
-	}
-
 	public void retire(){
 		//TODO stop accepting client requests
 		//TODO: transfer db and leave
@@ -77,11 +59,11 @@ public class Node extends Process{
 	public void printLog(){
 		//TODO print log		
 	}
-	
+
 	@Override
 	void body() {
 		System.out.println("Here I am: " + me);
-		
+
 		for(ProcessId nodeid: env.Nodes.nodes){
 			sendMessage(nodeid, new askAntiEntropyInfo(me));
 		}
@@ -93,7 +75,8 @@ public class Node extends Process{
 			}
 			else if(m instanceof askAntiEntropyInfo){
 				askAntiEntropyInfo msg = (askAntiEntropyInfo) m;
-				sendMessage(msg.src, new sendAntiEntropyInfo(me, version_vector, CSN));
+				if(msg.src!=me)
+					sendMessage(msg.src, new sendAntiEntropyInfo(me, version_vector, CSN));
 			}
 			else if(m instanceof RetireMessage){
 				retire();
@@ -113,17 +96,12 @@ public class Node extends Process{
 				version_vector.put(Integer.parseInt(msg.src.name), msg.w.accept_stamp);
 				tentativeWrite.add(msg.w);
 			}
-			else if(m instanceof sendDB){
-				sendDB msg = (sendDB) m;
-				//TODO: merge dbs
-			}
-			else if(m instanceof sendVector){
-				sendVector msg = (sendVector) m;
-				older_version_vector=msg.vv;
-			}
 			else if(m instanceof sendCSN){
 				sendCSN msg = (sendCSN) m;
 				CSN=msg.CSN;
+			}
+			else if(m instanceof YouArePrimaryMessage){
+				isPrimary=true;
 			}
 		}
 		env.Nodes.remove(node_id); //TODO rename node_id to my_id

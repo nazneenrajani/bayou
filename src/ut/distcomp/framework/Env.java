@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.util.*;
 
 public class Env {	
-	static Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
+	Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
 	NodeList Nodes;
 	ProcessId me= new ProcessId("env");
 
-	synchronized static void sendMessage(ProcessId dst, BayouMessage msg){
+	synchronized void sendMessage(ProcessId dst, BayouMessage msg){
 		Process p = procs.get(dst);
 		if (p != null) {
 			p.deliver(msg);
@@ -56,7 +56,8 @@ public class Env {
 		case "join":
 			Nodes.add(command.nodeid);
 			connections.addNode(command.nodeid);
-			new Node(this,Nodes.nodes[command.nodeid],command.nodeid); 
+			new Node(this,Nodes.nodes[command.nodeid],command.nodeid);
+			//TODO decide who is primary
 			break;
 		case "remove":
 			sendMessage(Nodes.getProcessId(command.nodeid), new RetireMessage(me));
