@@ -92,6 +92,7 @@ public class Node extends Process{
 			}
 			else if(m instanceof sendWrite){
 				sendWrite msg = (sendWrite) m;
+				version_vector.put(Integer.parseInt(msg.src.name), msg.w.accept_stamp);
 				tentativeWrite.add(msg.w);
 			}
 			else if(m instanceof sendDB){
