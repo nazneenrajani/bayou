@@ -1,6 +1,6 @@
 package ut.distcomp.framework;
 
-import java.util.HashMap;
+import java.util.*;
 
 //TODO arrange these according to the clients which handle them: Env, nodes, clients
 
@@ -56,5 +56,23 @@ class RetireMessage extends BayouMessage{
 class ResponseMessage extends BayouMessage{
 	ResponseMessage(ProcessId src){
 		this.src = src;
+	}
+}
+class sendDB extends BayouMessage{
+	PlayList db;
+	sendDB(ProcessId src, PlayList db){
+		this.src=src;this.db=db;
+	}
+}
+class sendVector extends BayouMessage{
+	Map<Integer,Integer> vv;
+	sendVector(ProcessId src, Map<Integer, Integer> older_version_vector){
+		this.src=src;this.vv=older_version_vector;
+	}
+}
+class sendCSN extends BayouMessage{
+	int CSN;
+	sendCSN(ProcessId src, int csn){
+		this.src=src;this.CSN=csn;
 	}
 }

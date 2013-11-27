@@ -111,7 +111,7 @@ public class Env {
 		Scanner input = new Scanner(System.in);
 
 		while(true){
-			System.out.println("Enter a command: ");
+			System.out.print("Enter a command: ");
 			InputCommand c = new InputCommand(input.next());
 			if(c.command.equals("continue")){
 				break;
