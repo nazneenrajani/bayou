@@ -8,29 +8,44 @@ import java.util.TreeSet;
 
 public class Node extends Process{
 	int node_id;
-	int CSN; int OSN;
-	Map<Integer,Integer> version_vector = new HashMap<Integer,Integer>();
-	Map<Integer,Integer> older_version_vector = new HashMap<Integer,Integer>();
-	Set<Write> tentativeWrite = new TreeSet<Write>();
-	Set<Write> committedWrite = new TreeSet<Write>();
+	Server_id server_id;
+	int CSN=0;
+	int current_stamp=0;
+	Map<Integer,Integer> version_vector = new HashMap<Integer,Integer>(); 
+	//TODO shouldn't this be storing (accept_stamp,serverid)
+	Set<Write> tentativeWrites = new TreeSet<Write>();
+	Set<Write> committedWrites = new TreeSet<Write>();
 	Boolean exitFlag = false;
-	Boolean isPrimary = false;
-
-	public Node(Env env, ProcessId me, int nodeId){
+	Boolean isPrimary;
+	Boolean acceptingClientRequests=false;
+	
+	public Node(Env env, ProcessId me, int nodeId, Boolean isPrimary){
 		this.node_id=nodeId;
 		this.me = me;
 		this.env = env;
+		this.isPrimary = isPrimary;
+		add_entry("creation;"+node_id);
+		//TODO creation actions. Send a Creation write to everyone. Get a server_id
+		//TODO after getting a serverid, start acceptingClientRequests
 		env.addProc(me, this);
-		//TODO creation actions. Send a Creation write to everyone
 	}
 
-	public void add_entry(){
-		//TODO: add to log, called by controller
+	public void add_entry(String command){
+		if(isPrimary){
+			committedWrites.add(new Write(node_id, current_stamp+1, CSN+1, command));
+			CSN++; current_stamp++;
+		}
+		else{
+			tentativeWrites.add(new Write(node_id, current_stamp+1, -1, command));
+			current_stamp++;
+		}
 	}
 
 	public void anti_entropy(ProcessId R, HashMap<Integer,Integer> versionVector, int csn){
+		//TODO check if this guy was known about before. If not, add to versionVector
+		
 		if(csn<CSN){
-			Iterator<Write> it = committedWrite.iterator(); 
+			Iterator<Write> it = committedWrites.iterator(); 
 			while(it.hasNext()){
 				Write cw = it.next();
 				if(cw.CSN>csn){
@@ -41,7 +56,7 @@ public class Node extends Process{
 				}
 			}
 		}
-		Iterator<Write> it = tentativeWrite.iterator(); 
+		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
 			if(versionVector.get(tw.serverID)<tw.accept_stamp)
@@ -57,7 +72,11 @@ public class Node extends Process{
 	}
 
 	public void printLog(){
-		//TODO print log		
+		System.out.println("Commited Writelog for "+me+":"+committedWrites);
+		System.out.println("Tentative Writelog for "+me+":"+tentativeWrites);
+		/*System.out.println("Log for "+me+":");
+		for(Write w:committedWrites)
+			System.out.print(w);*/
 	}
 
 	@Override
@@ -85,7 +104,8 @@ public class Node extends Process{
 				printLog();
 			}
 			else if(m instanceof UpdateMessage){
-				//TODO make write. Put timestamp
+				UpdateMessage msg = (UpdateMessage) m;
+				add_entry(msg.updateStr);
 			}
 			else if(m instanceof sendCommitNotification){
 				sendCommitNotification msg = (sendCommitNotification) m;
@@ -93,15 +113,14 @@ public class Node extends Process{
 			}
 			else if(m instanceof sendWrite){
 				sendWrite msg = (sendWrite) m;
-				version_vector.put(Integer.parseInt(msg.src.name), msg.w.accept_stamp);
-				tentativeWrite.add(msg.w);
-			}
-			else if(m instanceof sendCSN){
-				sendCSN msg = (sendCSN) m;
-				CSN=msg.CSN;
+				version_vector.put(msg.src.id, msg.w.accept_stamp);
+				//TODO handle case when a committed write is sent. handle duplicates
+				tentativeWrites.add(msg.w);
 			}
 			else if(m instanceof YouArePrimaryMessage){
 				isPrimary=true;
+				
+				//TODO make all my tentative rights permanent
 			}
 		}
 		env.Nodes.remove(node_id); //TODO rename node_id to my_id
@@ -109,16 +128,23 @@ public class Node extends Process{
 	}
 
 	private void removeTentative(int accept_stamp, int serverID, int csn) {
-		Iterator<Write> it = tentativeWrite.iterator(); 
+		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
 			if(tw.accept_stamp==accept_stamp){
 				if(tw.serverID==serverID){
-					committedWrite.add(new Write(serverID,accept_stamp,csn,tw.command));
+					committedWrites.add(new Write(serverID,accept_stamp,csn,tw.command));
+					//TODO update my CSN
 					it.remove();
 				}
-
 			}
 		}
+	}
+	
+	void commitAllTentativeWrites(){
+		for(Write w:tentativeWrites){
+			//TODO remove it
+		}
+		//TODO add to commiteedWrites
 	}
 }

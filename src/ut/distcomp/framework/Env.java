@@ -8,7 +8,7 @@ import java.util.*;
 public class Env {	
 	Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
 	NodeList Nodes;
-	ProcessId me= new ProcessId("env");
+	ProcessId me= new ProcessId("env:0");
 
 	synchronized void sendMessage(ProcessId dst, BayouMessage msg){
 		Process p = procs.get(dst);
@@ -38,7 +38,7 @@ public class Env {
 		{
 			clients[i]=new ProcessId("client:"+i);
 			clientConnections[i] = -1;
-			new Client(this,clients[i]);
+			new Client(this,clients[i],i);
 		}
 
 		Nodes = new NodeList(maxNodes);
@@ -54,12 +54,15 @@ public class Env {
 		System.out.println("processing "+command.command);
 		switch(command.command){
 		case "join":
+			boolean makeNewPrimary = Nodes.isEmpty();
 			Nodes.add(command.nodeid);
 			connections.addNode(command.nodeid);
-			new Node(this,Nodes.nodes[command.nodeid],command.nodeid);
-			//TODO decide who is primary
+			if(makeNewPrimary)
+				new Node(this,Nodes.nodes[command.nodeid],command.nodeid,true);
+			else
+				new Node(this,Nodes.nodes[command.nodeid],command.nodeid,false);
 			break;
-		case "remove":
+		case "leave":
 			sendMessage(Nodes.getProcessId(command.nodeid), new RetireMessage(me));
 			break;
 		case "isolate":
@@ -127,7 +130,7 @@ public class Env {
 	public static void main(String[] args) throws IOException{
 		new Env().run(args);
 	}
-	
+
 	public Env(){
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override

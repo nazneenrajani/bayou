@@ -1,8 +1,11 @@
 package ut.distcomp.framework;
 
+import java.util.Arrays;
+
 public class NodeList{
 	ProcessId[] nodes;
 	Env env;
+	int numNodes=0;
 	
 	public NodeList(int maxNodes){
 		nodes = new ProcessId[maxNodes];
@@ -12,13 +15,19 @@ public class NodeList{
 	
 	public void add(int i){
 		nodes[i]=new ProcessId("node:"+i);
+		numNodes++;
 	}
 	
 	public void remove(int i){
 		nodes[i]=null;
+		numNodes--;
 	}
 
 	public ProcessId getProcessId(Integer i) {
 		return nodes[i];
+	}
+	
+	public boolean isEmpty(){
+		return(numNodes==0);
 	}
 }

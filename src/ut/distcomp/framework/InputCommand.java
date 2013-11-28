@@ -20,7 +20,7 @@ public class InputCommand {
 			case "recoverConnection":
 				nodeid2 = Integer.parseInt(s[2]);
 			case "join":
-			case "remove":
+			case "leave":
 			case "isolate":
 			case "reconnect":
 				nodeid = Integer.parseInt(s[1]);
