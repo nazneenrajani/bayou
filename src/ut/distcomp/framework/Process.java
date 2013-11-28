@@ -29,4 +29,12 @@ public abstract class Process extends Thread {
 	void deliver(BayouMessage msg){
 		inbox.enqueue(msg);
 	}
+	
+	void delay(long timeout){
+		try {
+			Thread.sleep(timeout);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
 }

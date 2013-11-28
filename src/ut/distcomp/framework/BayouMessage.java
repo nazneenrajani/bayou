@@ -29,21 +29,21 @@ class askAntiEntropyInfo extends BayouMessage{
 		this.src=src;
 	}
 }
-class sendAntiEntropyInfo extends BayouMessage{
+class AntiEntropyInfoMessage extends BayouMessage{
 	HashMap<Integer, Integer> versionVector; int CSN;
-	sendAntiEntropyInfo(ProcessId src,Map<Integer, Integer> version_vector,int csn) {
+	AntiEntropyInfoMessage(ProcessId src,Map<Integer, Integer> version_vector,int csn) {
 		this.src=src;
 	}
 }
-class sendCommitNotification extends BayouMessage{
-	int accept_stamp;int serverID; int CSN;
-	sendCommitNotification(ProcessId src,int accept_stamp,int serverID,int csn) {
+class CommitNotification extends BayouMessage{
+	int accept_stamp;String serverID; int CSN;
+	CommitNotification(ProcessId src,int accept_stamp,String serverID,int csn) {
 		this.src=src;this.accept_stamp=accept_stamp;this.serverID=serverID;this.CSN=csn;
 	}
 }
-class sendWrite extends BayouMessage{
+class WriteMessage extends BayouMessage{
 	Write w;
-	sendWrite(ProcessId src, Write w){
+	WriteMessage(ProcessId src, Write w){
 		this.src=src;this.w=w;
 	}
 }
@@ -63,21 +63,15 @@ class ResponseMessage extends BayouMessage{
 		this.src = src;
 	}
 }
-class sendDB extends BayouMessage{
-	PlayList db;
-	sendDB(ProcessId src, PlayList db){
-		this.src=src;this.db=db;
+class CreationMessage extends BayouMessage{
+	public CreationMessage(ProcessId src){
+		this.src=src;
 	}
 }
-class sendVector extends BayouMessage{
-	Map<Integer,Integer> vv;
-	sendVector(ProcessId src, Map<Integer, Integer> older_version_vector){
-		this.src=src;this.vv=older_version_vector;
+class ServerIDMessage extends BayouMessage{
+	String server_id;
+	ServerIDMessage(ProcessId src, String server_id){
+		this.src = src;
+		this.server_id = server_id;
 	}
-}
-class sendCSN extends BayouMessage{
-	int CSN;
-	sendCSN(ProcessId src, int csn){
-		this.src=src;this.CSN=csn;
-	}
-}
+} 

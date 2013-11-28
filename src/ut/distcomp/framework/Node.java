@@ -8,9 +8,9 @@ import java.util.TreeSet;
 
 public class Node extends Process{
 	int node_id;
-	Server_id server_id;
+	String server_id;
 	int CSN=0;
-	int current_stamp=0;
+	int accept_stamp=0;
 	Map<Integer,Integer> version_vector = new HashMap<Integer,Integer>(); 
 	//TODO shouldn't this be storing (accept_stamp,serverid)
 	Set<Write> tentativeWrites = new TreeSet<Write>();
@@ -24,21 +24,20 @@ public class Node extends Process{
 		this.me = me;
 		this.env = env;
 		this.isPrimary = isPrimary;
-		add_entry("creation;"+node_id);
-		//TODO creation actions. Send a Creation write to everyone. Get a server_id
-		//TODO after getting a serverid, start acceptingClientRequests
 		env.addProc(me, this);
 	}
 
 	public void add_entry(String command){
+		//TODO should accept_stamp be logical or clock?
 		if(isPrimary){
-			committedWrites.add(new Write(node_id, current_stamp+1, CSN+1, command));
-			CSN++; current_stamp++;
+			committedWrites.add(new Write(server_id, accept_stamp+1, CSN+1, command));
+			CSN++; accept_stamp++;
 		}
 		else{
-			tentativeWrites.add(new Write(node_id, current_stamp+1, -1, command));
-			current_stamp++;
+			tentativeWrites.add(new Write(server_id, accept_stamp+1, -1, command));
+			accept_stamp++;
 		}
+		//TODO update version_vector
 	}
 
 	public void anti_entropy(ProcessId R, HashMap<Integer,Integer> versionVector, int csn){
@@ -50,9 +49,9 @@ public class Node extends Process{
 				Write cw = it.next();
 				if(cw.CSN>csn){
 					if(cw.accept_stamp<=versionVector.get(cw.serverID))
-						sendMessage(R,new sendCommitNotification(me, cw.accept_stamp, cw.serverID, cw.CSN));
+						sendMessage(R,new CommitNotification(me, cw.accept_stamp, cw.serverID, cw.CSN));
 					else
-						sendMessage(R, new sendWrite(me, cw));
+						sendMessage(R, new WriteMessage(me, cw));
 				}
 			}
 		}
@@ -60,7 +59,7 @@ public class Node extends Process{
 		while(it.hasNext()){
 			Write tw = it.next();
 			if(versionVector.get(tw.serverID)<tw.accept_stamp)
-				sendMessage(R, new sendWrite(me, tw));
+				sendMessage(R, new WriteMessage(me, tw));
 		}
 
 	}
@@ -68,6 +67,7 @@ public class Node extends Process{
 	public void retire(){
 		//TODO stop accepting client requests
 		//TODO: transfer db and leave
+		//add_entry("retire;"+server_id);
 		exitFlag=true;
 	}
 
@@ -82,20 +82,45 @@ public class Node extends Process{
 	@Override
 	void body() {
 		System.out.println("Here I am: " + me);
-
-		for(ProcessId nodeid: env.Nodes.nodes){
-			sendMessage(nodeid, new askAntiEntropyInfo(me));
+		
+		if(isPrimary){
+			//Entering an empty environment.
+			server_id="primary";
+			add_entry("creation;"+server_id);
 		}
-		while(!exitFlag){
+		else{
+			//send a write as a client would, to register myself
+			for(ProcessId nodeid: env.Nodes.nodes){
+				if(nodeid!=null){
+					sendMessage(nodeid, new CreationMessage(me));
+					break;
+				}
+			}
 			BayouMessage m = getNextMessage();
-			if(m instanceof sendAntiEntropyInfo){
-				sendAntiEntropyInfo msg = (sendAntiEntropyInfo) m;
+			if(m instanceof ServerIDMessage){
+				ServerIDMessage msg = (ServerIDMessage) m;
+				server_id = msg.server_id;
+				accept_stamp = Integer.parseInt(server_id)+1;
+			}
+		}
+
+		acceptingClientRequests=true;
+		while(!exitFlag){
+			//delay(500);
+			for(ProcessId nodeid: env.Nodes.nodes){
+				sendMessage(nodeid, new askAntiEntropyInfo(me));
+			} 
+			//TODO don't send too many of ^. Just send one and wait for a round of responses. Then send another. Maybe send one when you receive a response, or have new info to send
+			// or have a timeout
+			BayouMessage m = getNextMessage();
+			if(m instanceof AntiEntropyInfoMessage){
+				AntiEntropyInfoMessage msg = (AntiEntropyInfoMessage) m;
 				anti_entropy(msg.src,msg.versionVector,msg.CSN);
 			}
 			else if(m instanceof askAntiEntropyInfo){
 				askAntiEntropyInfo msg = (askAntiEntropyInfo) m;
 				if(msg.src!=me)
-					sendMessage(msg.src, new sendAntiEntropyInfo(me, version_vector, CSN));
+					sendMessage(msg.src, new AntiEntropyInfoMessage(me, version_vector, CSN));
 			}
 			else if(m instanceof RetireMessage){
 				retire();
@@ -103,31 +128,36 @@ public class Node extends Process{
 			else if(m instanceof PrintLogMessage){
 				printLog();
 			}
+			else if(m instanceof CreationMessage){
+				//TODO add new guy to version vector.
+				add_entry("creation;"+m.src.name);
+				sendMessage(m.src, new ServerIDMessage(me, accept_stamp+":"+server_id));
+			}
 			else if(m instanceof UpdateMessage){
 				UpdateMessage msg = (UpdateMessage) m;
 				add_entry(msg.updateStr);
 			}
-			else if(m instanceof sendCommitNotification){
-				sendCommitNotification msg = (sendCommitNotification) m;
-				removeTentative(msg.accept_stamp,msg.serverID,msg.CSN);
+			else if(m instanceof CommitNotification){
+				CommitNotification msg = (CommitNotification) m;
+				commitTentativeWrite(msg.accept_stamp,msg.serverID,msg.CSN);
 			}
-			else if(m instanceof sendWrite){
-				sendWrite msg = (sendWrite) m;
+			else if(m instanceof WriteMessage){
+				WriteMessage msg = (WriteMessage) m;
 				version_vector.put(msg.src.id, msg.w.accept_stamp);
 				//TODO handle case when a committed write is sent. handle duplicates
 				tentativeWrites.add(msg.w);
 			}
 			else if(m instanceof YouArePrimaryMessage){
+				//TODO nobody sends this yet
 				isPrimary=true;
-				
-				//TODO make all my tentative rights permanent
+				commitAllTentativeWrites();
 			}
 		}
 		env.Nodes.remove(node_id); //TODO rename node_id to my_id
 		env.connections.isolate(node_id);
 	}
 
-	private void removeTentative(int accept_stamp, int serverID, int csn) {
+	private void commitTentativeWrite(int accept_stamp, String serverID, int csn) {
 		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
@@ -143,8 +173,7 @@ public class Node extends Process{
 	
 	void commitAllTentativeWrites(){
 		for(Write w:tentativeWrites){
-			//TODO remove it
+			//TODO commit it. Avoid concurrentmodification exception
 		}
-		//TODO add to commiteedWrites
 	}
 }
