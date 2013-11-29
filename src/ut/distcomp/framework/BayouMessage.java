@@ -19,6 +19,12 @@ class UpdateMessage extends BayouMessage{
 		this.src = src; this.updateStr = updateStr;
 	}
 }
+class QueryMessage extends BayouMessage{
+	String songName;
+	QueryMessage(ProcessId src, String songName){
+		this.src = src; this.songName = songName;
+	}
+} 
 class PrintLogMessage extends BayouMessage{
 	PrintLogMessage(ProcessId src){
 		this.src = src;
@@ -30,9 +36,9 @@ class askAntiEntropyInfo extends BayouMessage{
 	}
 }
 class AntiEntropyInfoMessage extends BayouMessage{
-	HashMap<Integer, Integer> versionVector; int CSN;
-	AntiEntropyInfoMessage(ProcessId src,Map<Integer, Integer> version_vector,int csn) {
-		this.src=src;
+	HashMap<String, Integer> versionVector; int CSN; String server_id;
+	AntiEntropyInfoMessage(ProcessId src,HashMap<String, Integer> version_vector,int csn, String server_id) {
+		this.src=src; this.versionVector = version_vector; this.CSN=csn; this.server_id=server_id; 
 	}
 }
 class CommitNotification extends BayouMessage{

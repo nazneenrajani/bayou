@@ -25,7 +25,15 @@ public class Client extends Process {
 				if(myConnectedNode()!=null)
 					sendMessage(myConnectedNode(), new UpdateMessage(me, m.updateStr));
 				else{
-					//TODO buffer message. Maybe in test cases this never happens
+					System.err.println(me+" not connected to any node");
+				}
+			}
+			else if(msg instanceof QueryMessage){
+				QueryMessage m = (QueryMessage) msg;
+				if(myConnectedNode()!=null)
+					sendMessage(myConnectedNode(), new QueryMessage(me, m.songName));
+				else{
+					System.err.println(me+" not connected to any node");
 				}
 			}
 			else if(msg instanceof ResponseMessage){

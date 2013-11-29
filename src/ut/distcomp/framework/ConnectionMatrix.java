@@ -1,11 +1,15 @@
 package ut.distcomp.framework;
 
+import java.util.Arrays;
+
 public class ConnectionMatrix {
 	Boolean[][] connections;
 	int maxNodes;
+	NodeList Nodes;
 	
-	public ConnectionMatrix(int maxNodes){
+	public ConnectionMatrix(int maxNodes, NodeList nodes){
 		this.maxNodes = maxNodes;
+		this.Nodes = nodes;
 		connections = new Boolean[maxNodes][maxNodes];
 		for(int i=0;i<maxNodes;i++)
 			for(int j=0;j<maxNodes;j++) 

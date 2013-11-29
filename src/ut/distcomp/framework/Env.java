@@ -31,7 +31,7 @@ public class Env {
 	int[] clientConnections = new int[numClients];
 
 	int maxNodes=10;
-	ConnectionMatrix connections = new ConnectionMatrix(maxNodes);
+	ConnectionMatrix connections = new ConnectionMatrix(maxNodes, Nodes);
 
 	void run(String[] args) throws IOException{
 		for(int i=0;i<numClients;i++)
@@ -51,14 +51,16 @@ public class Env {
 	}
 
 	private void process(InputCommand command) {
-		System.out.println("processing "+command.command);
+		System.out.println("processing "+command);
 		switch(command.command){
 		case "join":
 			boolean makeNewPrimary = Nodes.isEmpty();
 			Nodes.add(command.nodeid);
 			connections.addNode(command.nodeid);
-			if(makeNewPrimary)
+			if(makeNewPrimary){
+				System.out.println("Makeing node:"+command.nodeid+" primary");
 				new Node(this,Nodes.nodes[command.nodeid],command.nodeid,true);
+			}
 			else
 				new Node(this,Nodes.nodes[command.nodeid],command.nodeid,false);
 			break;
@@ -78,7 +80,10 @@ public class Env {
 			connections.recoverConnection(command.nodeid, command.nodeid2);
 			break;
 		case "update":
-			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr)); //TODO make update message
+			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr));
+			break;
+		case "query":
+			sendMessage(clients[command.clientid], new QueryMessage(me, command.updateStr));
 			break;
 		case "printLog":
 			if(command.nodeid!=null)
@@ -113,9 +118,8 @@ public class Env {
 
 	private void goToPrompt() {		
 		Scanner input = new Scanner(System.in);
-
-		while(true){
-			System.out.print("Enter a command: ");
+		System.out.print("Enter a command: ");
+		while(input.hasNext()){
 			InputCommand c = new InputCommand(input.next());
 			System.out.println("");
 			if(c.command.equals("continue")){
@@ -124,6 +128,7 @@ public class Env {
 			else{
 				process(c);
 			}
+			System.out.print("Enter a command: ");
 		}
 		input.close();
 	}

@@ -18,6 +18,8 @@ public abstract class Process extends Thread {
 
 	void sendMessage(ProcessId dst, BayouMessage msg){		
 		if(env.connections.get(me,dst)){
+			//System.out.println(me+" sending "+msg+" to "+dst);
+			//System.out.println("inbox "+me+inbox.ll);
 			env.sendMessage(dst, msg);
 		}
 		else{

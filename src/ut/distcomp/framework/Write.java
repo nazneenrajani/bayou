@@ -23,6 +23,6 @@ public class Write implements Comparable<Write>{
 	}
 	
 	public String toString(){
-		return "("+serverID+","+accept_stamp+","+CSN+","+command+")";
+		return "(serverID="+serverID+",ac_stamp="+accept_stamp+",CSN="+CSN+",command="+command+")";
 	}
 }
