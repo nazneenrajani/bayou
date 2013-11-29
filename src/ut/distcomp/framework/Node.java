@@ -18,6 +18,7 @@ public class Node extends Process{
 	Boolean exitFlag = false;
 	Boolean isPrimary;
 	Boolean acceptingClientRequests=false;
+	Boolean newInformation = true;
 
 	public Node(Env env, ProcessId me, int nodeId, Boolean isPrimary){
 		this.node_id=nodeId;
@@ -123,10 +124,11 @@ public class Node extends Process{
 		}
 
 		acceptingClientRequests=true; 
+		newInformation = true;
 		while(!exitFlag){
 			//printLog();
 			delay(500);
-			if(inbox.ll.isEmpty()){
+			if(inbox.ll.isEmpty() && newInformation){ //TODO set newInformation to false when there is nothing
 				delay(2000);
 				//TODO send only if I have something to say
 				for(ProcessId nodeid: env.Nodes.nodes){
