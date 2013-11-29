@@ -80,10 +80,10 @@ public class Env {
 			connections.recoverConnection(command.nodeid, command.nodeid2);
 			break;
 		case "update":
-			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr));
+			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr,-1));
 			break;
 		case "query":
-			sendMessage(clients[command.clientid], new QueryMessage(me, command.updateStr));
+			sendMessage(clients[command.clientid], new QueryMessage(me, command.updateStr,-1));
 			break;
 		case "printLog":
 			if(command.nodeid!=null)
