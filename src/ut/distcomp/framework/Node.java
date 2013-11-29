@@ -171,6 +171,10 @@ public class Node extends Process{
 				QueryMessage msg = (QueryMessage) m;
 				//TODO respond to query. How do we ensure RYW?
 			}
+			/*else if(m instanceof sendDB){
+				sendDB msg = (sendDB) m;
+				//TODO: merge dbs
+			}*/
 			else if(m instanceof CommitNotification){
 				CommitNotification msg = (CommitNotification) m;
 				commitTentativeWrite(msg.accept_stamp,msg.serverID,msg.CSN);
@@ -198,6 +202,10 @@ public class Node extends Process{
 				}
 				//TODO handle case where write is a retirement write
 			}
+/*			else if(m instanceof sendCSN){
+				sendCSN msg = (sendCSN) m;
+				CSN=msg.CSN;
+			}*/
 			else if(m instanceof YouArePrimaryMessage){
 				//TODO nobody sends this yet. Required if primary ever leaves
 				isPrimary=true;
