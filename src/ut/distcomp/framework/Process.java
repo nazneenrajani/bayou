@@ -16,14 +16,27 @@ public abstract class Process extends Thread {
 		return inbox.bdequeue();
 	}
 
-	void sendMessage(ProcessId dst, BayouMessage msg){
-		if(env.connections.get(me,dst))
+	void sendMessage(ProcessId dst, BayouMessage msg){		
+		if(env.connections.get(me,dst)){
+			//System.out.println(me+" sending "+msg+" to "+dst);
+			//System.out.println("inbox "+me+inbox.ll);
 			env.sendMessage(dst, msg);
-		else
-			deliver(new FailureToSendMessage(me,dst));
+		}
+		else{
+			//TODO just dropping packets for now. Should deliver failure message?
+			//deliver(new FailureToSendMessage(me,dst));
+		}
 	}
 
 	void deliver(BayouMessage msg){
 		inbox.enqueue(msg);
+	}
+	
+	void delay(long timeout){
+		try {
+			Thread.sleep(timeout);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }

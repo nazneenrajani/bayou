@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.util.*;
 
 public class Env {	
-	static Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
+	Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
 	NodeList Nodes;
-	ProcessId me= new ProcessId("env");
+	ProcessId me= new ProcessId("env:0");
 
-	synchronized static void sendMessage(ProcessId dst, BayouMessage msg){
+	synchronized void sendMessage(ProcessId dst, BayouMessage msg){
 		Process p = procs.get(dst);
 		if (p != null) {
 			p.deliver(msg);
@@ -31,14 +31,14 @@ public class Env {
 	int[] clientConnections = new int[numClients];
 
 	int maxNodes=10;
-	ConnectionMatrix connections = new ConnectionMatrix(maxNodes);
+	ConnectionMatrix connections = new ConnectionMatrix(maxNodes, Nodes);
 
 	void run(String[] args) throws IOException{
 		for(int i=0;i<numClients;i++)
 		{
 			clients[i]=new ProcessId("client:"+i);
 			clientConnections[i] = -1;
-			new Client(this,clients[i]);
+			new Client(this,clients[i],i);
 		}
 
 		Nodes = new NodeList(maxNodes);
@@ -51,14 +51,20 @@ public class Env {
 	}
 
 	private void process(InputCommand command) {
-		System.out.println("processing "+command.command);
+		System.out.println("processing "+command);
 		switch(command.command){
 		case "join":
+			boolean makeNewPrimary = Nodes.isEmpty();
 			Nodes.add(command.nodeid);
 			connections.addNode(command.nodeid);
-			new Node(this,Nodes.nodes[command.nodeid],command.nodeid); 
+			if(makeNewPrimary){
+				System.out.println("Makeing node:"+command.nodeid+" primary");
+				new Node(this,Nodes.nodes[command.nodeid],command.nodeid,true);
+			}
+			else
+				new Node(this,Nodes.nodes[command.nodeid],command.nodeid,false);
 			break;
-		case "remove":
+		case "leave":
 			sendMessage(Nodes.getProcessId(command.nodeid), new RetireMessage(me));
 			break;
 		case "isolate":
@@ -74,7 +80,10 @@ public class Env {
 			connections.recoverConnection(command.nodeid, command.nodeid2);
 			break;
 		case "update":
-			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr)); //TODO make update message
+			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr));
+			break;
+		case "query":
+			sendMessage(clients[command.clientid], new QueryMessage(me, command.updateStr));
 			break;
 		case "printLog":
 			if(command.nodeid!=null)
@@ -109,16 +118,17 @@ public class Env {
 
 	private void goToPrompt() {		
 		Scanner input = new Scanner(System.in);
-
-		while(true){
-			System.out.print("Enter a command: ");
+		System.out.print("Enter a command: ");
+		while(input.hasNext()){
 			InputCommand c = new InputCommand(input.next());
+			System.out.println("");
 			if(c.command.equals("continue")){
 				break;
 			}
 			else{
 				process(c);
 			}
+			System.out.print("Enter a command: ");
 		}
 		input.close();
 	}
@@ -126,7 +136,7 @@ public class Env {
 	public static void main(String[] args) throws IOException{
 		new Env().run(args);
 	}
-	
+
 	public Env(){
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
