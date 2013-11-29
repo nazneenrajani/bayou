@@ -10,13 +10,13 @@ import java.util.TreeSet;
 
 public class Node extends Process{
 	int node_id;
-	int CSN; int OSN;
+	int CSN;
 	Map<Integer,Integer> version_vector = new HashMap<Integer,Integer>();
-	Map<Integer,Integer> older_version_vector = new HashMap<Integer,Integer>();
+	//Map<Integer,Integer> older_version_vector = new HashMap<Integer,Integer>();
 	Set<Write> tentativeWrite = new TreeSet<Write>();
 	Set<Write> committedWrite = new TreeSet<Write>();
 	PlayList db;
-	PlayList old_db;
+	//PlayList old_db;
 	Boolean exitFlag = false;
 	//TODO isPrimary
 
@@ -31,15 +31,15 @@ public class Node extends Process{
 		//TODO: add to log, called by controller
 	}
 
-	public void truncate_log(PlayList currentPL, HashMap<Integer,Integer> versionVector){
+	/*public void truncate_log(PlayList currentPL, HashMap<Integer,Integer> versionVector){
 		//TODO: remove logs that are stable
 		old_db = currentPL;
 		older_version_vector=version_vector;
-	}
+	}*/
 
 	public void anti_entropy(ProcessId R, HashMap<Integer,Integer> versionVector, int csn){
-		if(OSN>csn)
-			databaseTransfer(R);
+/*		if(OSN>csn)
+			databaseTransfer(R);*/
 		if(csn<CSN){
 			Iterator<Write> it = committedWrite.iterator(); 
 			while(it.hasNext()){
@@ -61,12 +61,12 @@ public class Node extends Process{
 
 	}
 
-	private void databaseTransfer(ProcessId R) {
+	/*private void databaseTransfer(ProcessId R) {
 		//TODO: roll back to previous state
 		sendMessage(R, new sendDB(me, old_db));
 		sendMessage(R, new sendVector(me, older_version_vector));
 		sendMessage(R, new sendCSN(me, CSN));
-	}
+	}*/
 
 	public void retire(){
 		//TODO stop accepting client requests
@@ -113,7 +113,7 @@ public class Node extends Process{
 				version_vector.put(Integer.parseInt(msg.src.name), msg.w.accept_stamp);
 				tentativeWrite.add(msg.w);
 			}
-			else if(m instanceof sendDB){
+			/*else if(m instanceof sendDB){
 				sendDB msg = (sendDB) m;
 				//TODO: merge dbs
 			}
@@ -124,7 +124,7 @@ public class Node extends Process{
 			else if(m instanceof sendCSN){
 				sendCSN msg = (sendCSN) m;
 				CSN=msg.CSN;
-			}
+			}*/
 		}
 		env.Nodes.remove(node_id); //TODO rename node_id to my_id
 		env.connections.isolate(node_id);
