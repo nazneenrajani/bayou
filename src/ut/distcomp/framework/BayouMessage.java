@@ -20,12 +20,25 @@ class UpdateMessage extends BayouMessage{
 		this.src = src; this.updateStr = updateStr; this.cid=cid;
 	}
 }
+class ClientUpdateMessage extends BayouMessage{
+	String updateStr;
+	ProcessId dst;
+	ClientUpdateMessage(ProcessId src, String updateStr, ProcessId dst){
+		this.src = src; this.updateStr = updateStr; this.dst=dst;
+	}
+}
 class QueryMessage extends BayouMessage{
 	String songName; int cid;
 	QueryMessage(ProcessId src, String songName, int cid){
 		this.src = src; this.songName = songName;this.cid=cid;
 	}
 } 
+class ClientQueryMessage extends BayouMessage{
+	String songName; ProcessId dst;
+	ClientQueryMessage(ProcessId src, String songName, ProcessId dst){
+		this.src = src; this.songName = songName; this.dst=dst;
+	}
+}
 class PrintLogMessage extends BayouMessage{
 	PrintLogMessage(ProcessId src){
 		this.src = src;

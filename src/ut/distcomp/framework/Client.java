@@ -19,22 +19,24 @@ public class Client extends Process {
 
 		while(true){
 			BayouMessage msg = getNextMessage();
-			if(msg instanceof UpdateMessage){				
-				UpdateMessage m = (UpdateMessage) msg;
+			if(msg instanceof ClientUpdateMessage){				
+				ClientUpdateMessage m = (ClientUpdateMessage) msg;
 				cid++;
-				if(myConnectedNode()!=null)
+				sendMessage(m.dst, new UpdateMessage(me, m.updateStr,cid));
+				/*if(myConnectedNode()!=null)
 					sendMessage(myConnectedNode(), new UpdateMessage(me, m.updateStr,cid));
 				else{
 					System.err.println(me+" not connected to any node");
-				}
+				}*/
 			}
-			else if(msg instanceof QueryMessage){
-				QueryMessage m = (QueryMessage) msg;
-				if(myConnectedNode()!=null)
+			else if(msg instanceof ClientQueryMessage){
+				ClientQueryMessage m = (ClientQueryMessage) msg;
+				sendMessage(m.dst, new QueryMessage(me, m.songName,cid));
+				/*if(myConnectedNode()!=null)
 					sendMessage(myConnectedNode(), new QueryMessage(me, m.songName,cid));
 				else{
 					System.err.println(me+" not connected to any node");
-				}
+				}*/
 			}
 			else if(msg instanceof ResponseMessage){
 				ResponseMessage m = (ResponseMessage) msg;
