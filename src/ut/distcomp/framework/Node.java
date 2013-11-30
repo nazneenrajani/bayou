@@ -64,7 +64,6 @@ public class Node extends Process{
 
 	public void anti_entropy(ProcessId R, HashMap<String,Integer> r_versionVector, int r_csn, String r_server_id){
 		System.out.println(me+" doing anti_entropy with "+R+"\n"+"my vv "+version_vector + " his "+r_versionVector);
-
 		if(r_csn<CSN){
 			Iterator<Write> it = committedWrites.iterator(); 
 			while(it.hasNext()){
@@ -204,13 +203,19 @@ public class Node extends Process{
 			else if(m instanceof CommitNotification){
 				CommitNotification msg = (CommitNotification) m;
 				commitTentativeWrite(msg.accept_stamp,msg.serverID,msg.CSN);
-				//TODO handle the case that the write is already committed
+				//TODO handle the case that the write is already committed->handled by checking CSN>=csn
 			}
 			else if(m instanceof WriteMessage){
 				//TODO primary makes tentative writes permanent
 				WriteMessage msg = (WriteMessage) m;
 				version_vector.put(msg.w.serverID, msg.w.accept_stamp); //TODO this should handle the case that you haven't heard about this guy before
-				//TODO make sure duplicates are handled. Does TreeSet handle that?
+				if(isNewMsg(msg)){
+					if(msg.w.CSN==-1)
+						tentativeWrites.add(msg.w);
+					else
+						commitNewWrite(msg.w);
+				}
+				/*//TODO make sure duplicates are handled. Does TreeSet handle that?
 				//tentativeWrites.add(msg.w);
 				if(msg.w.CSN==-1){
 					//if(!committedWrites.contains(msg.w)) //TODO ensure contains uses only server_id and accept_stamps, or modify this line
@@ -220,7 +225,7 @@ public class Node extends Process{
 					//				if(tentativeWrites.contains(msg.w)) //TODO same as above
 					//					tentativeWrites.remove(msg.w);
 					committedWrites.add(msg.w);
-				}
+				}*/
 				if(msg.w.command.split(";")[0].equals("creation")){
 					String new_server_id = msg.w.command.split(";")[2];
 					int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
@@ -246,7 +251,34 @@ public class Node extends Process{
 		env.connections.isolate(node_id);
 	}
 
+	private boolean isNewMsg(WriteMessage msg) {
+		Iterator<Write> it = tentativeWrites.iterator(); 
+		while(it.hasNext()){
+			Write tw = it.next();
+			if(tw.accept_stamp==msg.w.accept_stamp){
+				if(tw.serverID.equals(msg.w.serverID))
+					return false;
+			}
+		}
+		Iterator<Write> itc = committedWrites.iterator(); 
+		while(itc.hasNext()){
+			Write tw = itc.next();
+			if(tw==msg.w){
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private void commitNewWrite(Write r_w){
+		if(CSN>=r_w.CSN)
+			return;
+		committedWrites.add(r_w);
+		CSN=r_w.CSN;
+	}
 	private void commitTentativeWrite(int accept_stamp, String serverID, int csn) {
+		if(CSN>=csn)
+			return;
 		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
