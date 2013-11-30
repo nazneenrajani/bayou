@@ -4,13 +4,12 @@ import java.util.Arrays;
 
 public class Client extends Process {
 	int client_id;
-	PlayList db;
+	int cid=0;
 
 	public Client(Env env, ProcessId me, int client_id){
 		this.env=env;
 		this.me=me;
 		this.client_id= client_id;
-		this.db = new PlayList();
 		env.addProc(me, this);
 	}
 
@@ -20,10 +19,11 @@ public class Client extends Process {
 
 		while(true){
 			BayouMessage msg = getNextMessage();
-			if(msg instanceof UpdateMessage){
+			if(msg instanceof UpdateMessage){				
 				UpdateMessage m = (UpdateMessage) msg;
+				cid++;
 				if(myConnectedNode()!=null)
-					sendMessage(myConnectedNode(), new UpdateMessage(me, m.updateStr));
+					sendMessage(myConnectedNode(), new UpdateMessage(me, m.updateStr,cid));
 				else{
 					System.err.println(me+" not connected to any node");
 				}
@@ -31,15 +31,15 @@ public class Client extends Process {
 			else if(msg instanceof QueryMessage){
 				QueryMessage m = (QueryMessage) msg;
 				if(myConnectedNode()!=null)
-					sendMessage(myConnectedNode(), new QueryMessage(me, m.songName));
+					sendMessage(myConnectedNode(), new QueryMessage(me, m.songName,cid));
 				else{
 					System.err.println(me+" not connected to any node");
 				}
 			}
 			else if(msg instanceof ResponseMessage){
-				//TODO print
+				ResponseMessage m = (ResponseMessage) msg;
+				System.err.println("Received response "+m.response+" from "+m.src);
 			}
-			//TODO handle messages to update database from node
 		}
 	}
 

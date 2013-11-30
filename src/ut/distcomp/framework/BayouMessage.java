@@ -15,14 +15,15 @@ class YouArePrimaryMessage extends BayouMessage{
 }
 class UpdateMessage extends BayouMessage{
 	String updateStr;
-	UpdateMessage(ProcessId src, String updateStr){
-		this.src = src; this.updateStr = updateStr;
+	int cid;
+	UpdateMessage(ProcessId src, String updateStr, int cid){
+		this.src = src; this.updateStr = updateStr; this.cid=cid;
 	}
 }
 class QueryMessage extends BayouMessage{
-	String songName;
-	QueryMessage(ProcessId src, String songName){
-		this.src = src; this.songName = songName;
+	String songName; int cid;
+	QueryMessage(ProcessId src, String songName, int cid){
+		this.src = src; this.songName = songName;this.cid=cid;
 	}
 } 
 class PrintLogMessage extends BayouMessage{
@@ -65,8 +66,9 @@ class RetireMessage extends BayouMessage{
 	}
 }
 class ResponseMessage extends BayouMessage{
-	ResponseMessage(ProcessId src){
-		this.src = src;
+	String response;
+	ResponseMessage(ProcessId src, String response){
+		this.src = src; this.response = response;
 	}
 }
 class CreationMessage extends BayouMessage{

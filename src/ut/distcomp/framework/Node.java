@@ -16,8 +16,13 @@ public class Node extends Process{
 	Set<Write> tentativeWrites = new TreeSet<Write>();
 	Set<Write> committedWrites = new TreeSet<Write>();
 	Boolean exitFlag = false;
+	Boolean exitOnNextAntientropy = false;
 	Boolean isPrimary;
-	Boolean acceptingClientRequests=false;
+	Boolean acceptingClientRequests=true;
+	Boolean newInformation = true;
+	PlayList db;
+	
+	final int inf = 99999;
 
 	public Node(Env env, ProcessId me, int nodeId, Boolean isPrimary){
 		this.node_id=nodeId;
@@ -30,50 +35,68 @@ public class Node extends Process{
 	public void add_entry(String command){
 		if(isPrimary){
 			CSN++; accept_stamp++;
-			committedWrites.add(new Write(server_id, accept_stamp, CSN, command));			
+			committedWrites.add(new Write(server_id, accept_stamp, CSN, command));
+			//TODO execute commands in the order they were received everytime something is committed
+			db.execute(command);
 		}
 		else{
 			accept_stamp++;
 			tentativeWrites.add(new Write(server_id, accept_stamp, -1, command));
 		}
-		version_vector.put(server_id,accept_stamp); //TODO check that this is the only place I update vv
+		version_vector.put(server_id,accept_stamp); //TODO I always update vv with accept_stamp
+	}
+	
+	int CompleteV(HashMap<String,Integer> r_versionVector, String w_serverID){
+		if(r_versionVector.containsKey(w_serverID)){
+			return r_versionVector.get(w_serverID);
+		}
+		else if(w_serverID.equals("0:primary")) //first server
+			return inf;
+		else{
+			String[] s =w_serverID.split(":",2);
+			int tki = Integer.parseInt(s[0]);
+			if(CompleteV(r_versionVector, s[1])>=tki)
+				return inf;
+			else
+				return -inf;
+		}
 	}
 
 	public void anti_entropy(ProcessId R, HashMap<String,Integer> r_versionVector, int r_csn, String r_server_id){
 		System.out.println(me+" doing anti_entropy with "+R+"\n"+"my vv "+version_vector + " his "+r_versionVector);
-	
 		if(r_csn<CSN){
 			Iterator<Write> it = committedWrites.iterator(); 
 			while(it.hasNext()){
 				Write cw = it.next();
 				if(cw.CSN>r_csn){
-					int r_accept_stamp=-1;
-					if(r_versionVector.containsKey(cw.serverID))
-						r_accept_stamp = r_versionVector.get(cw.serverID);
-					if(cw.accept_stamp<=r_accept_stamp)
-						sendMessage(R,new CommitNotification(me, cw.accept_stamp, cw.serverID, cw.CSN));
-					else
-						sendMessage(R, new WriteMessage(me, cw));
+					int r_accept_stamp = CompleteV(r_versionVector,cw.serverID);
+					if(r_accept_stamp<inf){
+						if(cw.accept_stamp<=r_accept_stamp)
+							sendMessage(R,new CommitNotification(me, cw.accept_stamp, cw.serverID, cw.CSN));
+						else
+							sendMessage(R, new WriteMessage(me, cw));
+					}
 				}
 			}
 		}
 		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
-			int r_accept_stamp=-1;
-			if(r_versionVector.containsKey(tw.serverID))
-				r_accept_stamp = r_versionVector.get(tw.serverID);
-			if(r_accept_stamp<tw.accept_stamp)
-				sendMessage(R, new WriteMessage(me, tw));
+			int r_accept_stamp = CompleteV(r_versionVector,tw.serverID);
+			if(r_accept_stamp<inf){
+				if(r_versionVector.get(tw.serverID)<tw.accept_stamp)
+					sendMessage(R, new WriteMessage(me, tw));
+			}
 		}
+		if(exitOnNextAntientropy)
+			exitFlag = true;
 	}
 
 	public void retire(){
 		acceptingClientRequests=false;
-		//TODO add retirement entry and do anti_entropy
 		//TODO anything special if primary decides to retire. Make new primary?
-		//add_entry("retire;"+server_id);
-		exitFlag=true;
+		add_entry("retire;"+me+";"+server_id);
+		exitOnNextAntientropy=true;
 	}
 
 	public void printLog(){
@@ -121,11 +144,11 @@ public class Node extends Process{
 				deliver(m);
 		}
 
-		acceptingClientRequests=true; 
+		newInformation = true;
 		while(!exitFlag){
 			//printLog();
 			delay(500);
-			if(inbox.ll.isEmpty()){
+			if(inbox.ll.isEmpty() && newInformation){ //TODO set newInformation to false when there is nothing
 				delay(2000);
 				//TODO send only if I have something to say
 				for(ProcessId nodeid: env.Nodes.nodes){
@@ -160,13 +183,18 @@ public class Node extends Process{
 				System.out.println(me+" assigned server_id "+new_server_id+" to "+msg.src);
 			}
 			else if(m instanceof UpdateMessage){
-				//TODO use acceptClientRequests
 				UpdateMessage msg = (UpdateMessage) m;
-				add_entry(msg.updateStr);
+				if(acceptingClientRequests){
+					//TODO use cid
+					add_entry(msg.updateStr);
+				}
+				else
+					System.err.println("Not accepting client requests. Dropped: "+msg.updateStr);
 			}
 			else if(m instanceof QueryMessage){
 				QueryMessage msg = (QueryMessage) m;
-				//TODO respond to query. How do we ensure RYW?
+				//TODO Ensure RYW through cid
+				sendMessage(msg.src, new ResponseMessage(me, "Not responding to queries right now"));
 			}
 			/*else if(m instanceof sendDB){
 				sendDB msg = (sendDB) m;
@@ -203,7 +231,11 @@ public class Node extends Process{
 					int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
 					version_vector.put(new_server_id, accept_stamp); //TODO should accept_stamp be 1 less than his first stamp?
 				}
-				//TODO handle case where write is a retirement write
+				else if(msg.w.command.split(";")[0].equals("retire")){
+					//TODO handle case where write is a retirement write
+					String retiring_server_id = msg.w.command.split(";")[2];
+					version_vector.remove(retiring_server_id);
+				}
 			}
 			/*			else if(m instanceof sendCSN){
 				sendCSN msg = (sendCSN) m;
@@ -254,8 +286,9 @@ public class Node extends Process{
 				if(tw.serverID.equals(serverID)){
 					System.out.println(me +" Committing tentative write "+tw);
 					committedWrites.add(new Write(serverID,accept_stamp,csn,tw.command));
-					if(csn>CSN)
+					if(csn>CSN) //TODO This should always be true for a single server. maybe not for multiple
 						CSN=csn;
+					//TODO execute commands in the order they were received 
 					it.remove();
 				}
 			}

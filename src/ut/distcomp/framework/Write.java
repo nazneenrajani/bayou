@@ -5,6 +5,7 @@ public class Write implements Comparable<Write>{
 	int accept_stamp;
 	int CSN=-1;
 	String command;
+	//TODO add clientid and cid?
 
 	public Write(String id, int accept_stamp, int csn, String command){
 		this.serverID=id;
