@@ -28,6 +28,7 @@ public class PlayList {
 	}
 
 	public void execute(String updateStr){
+		if(1==1)return;
 		String[] s=updateStr.split("[\\[;\\]]");
 		switch(s[0]){
 		case "add":

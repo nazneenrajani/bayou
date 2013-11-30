@@ -77,9 +77,10 @@ class CreationMessage extends BayouMessage{
 	}
 }
 class ServerIDMessage extends BayouMessage{
-	String server_id;
-	ServerIDMessage(ProcessId src, String server_id){
+	String server_id; String parent_id;
+	ServerIDMessage(ProcessId src, String server_id, String parent_id){
 		this.src = src;
 		this.server_id = server_id;
+		this.parent_id = parent_id;
 	}
 } 
