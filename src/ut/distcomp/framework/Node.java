@@ -45,38 +45,6 @@ public class Node extends Process{
 		}
 		version_vector.put(server_id,accept_stamp); //TODO I always update vv with accept_stamp
 	}
-
-	Boolean bSendWrite(HashMap<String,Integer> r_versionVector, String w_serverID, int w_accept_stamp){
-		Boolean shouldISend = false;
-		int output=-1;
-		if(r_versionVector.containsKey(w_serverID)){
-			if(w_accept_stamp<=r_versionVector.get(w_serverID))
-				shouldISend=true;
-		}
-		else{
-			String[] s= w_serverID.split(":",2);
-			while(true){
-				int parent_accept_stamp = Integer.parseInt(s[0]);
-				String parent_server_id = s[1];
-				if(r_versionVector.containsKey(parent_server_id)){
-					if(r_versionVector.get(parent_server_id)>=parent_accept_stamp){
-						//R knows that this guy is dead. don't send him anything
-						//output=inf;
-						break;
-					}
-				}
-				else{ //R doesn't know about the parent. Go one level higher
-					if(!parent_server_id.contains(":")){
-						//We've reached the beginning, he's never heard of these people. He just joined
-						//TODO what if the primary has changed?
-						break;
-					}
-					s = parent_server_id.split(":",2);
-				}
-			}
-		}
-		return shouldISend;
-	}
 	
 	int CompleteV(HashMap<String,Integer> r_versionVector, String w_serverID){
 		if(r_versionVector.containsKey(w_serverID)){
@@ -102,7 +70,6 @@ public class Node extends Process{
 			while(it.hasNext()){
 				Write cw = it.next();
 				if(cw.CSN>r_csn){
-					//Boolean shouldISend = bSendWrite(r_versionVector, cw.serverID, cw.accept_stamp);
 					int r_accept_stamp = CompleteV(r_versionVector,cw.serverID);
 					if(r_accept_stamp<inf){
 						if(cw.accept_stamp<=r_accept_stamp)
@@ -116,10 +83,9 @@ public class Node extends Process{
 		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
-			//Boolean shouldISend = bSendWrite(r_versionVector, tw.serverID, tw.accept_stamp);
 			int r_accept_stamp = CompleteV(r_versionVector,tw.serverID);
 			if(r_accept_stamp<inf){
-				if(r_versionVector.get(tw.serverID)<tw.accept_stamp) //TODO check strict
+				if(r_versionVector.get(tw.serverID)<tw.accept_stamp)
 					sendMessage(R, new WriteMessage(me, tw));
 			}
 		}
