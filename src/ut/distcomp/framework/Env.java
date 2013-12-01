@@ -80,10 +80,10 @@ public class Env {
 			connections.recoverConnection(command.nodeid, command.nodeid2);
 			break;
 		case "update":
-			sendMessage(clients[command.clientid], new UpdateMessage(me, command.updateStr,-1));
+			sendMessage(clients[command.clientid], new ClientUpdateMessage(me, command.updateStr, Nodes.getProcessId(clientConnections[command.clientid])));
 			break;
 		case "query":
-			sendMessage(clients[command.clientid], new QueryMessage(me, command.updateStr,-1));
+			sendMessage(clients[command.clientid], new ClientQueryMessage(me, command.updateStr,Nodes.getProcessId(clientConnections[command.clientid])));
 			break;
 		case "printLog":
 			if(command.nodeid!=null)
@@ -128,9 +128,20 @@ public class Env {
 			else{
 				process(c);
 			}
+			delay(2000);
 			System.out.print("Enter a command: ");
 		}
 		input.close();
+	}
+
+	
+	private void delay(int i) {
+		try {
+			Thread.sleep(i);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 	public static void main(String[] args) throws IOException{
