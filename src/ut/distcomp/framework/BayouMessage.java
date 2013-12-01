@@ -60,11 +60,17 @@ class CommitNotification extends BayouMessage{
 	CommitNotification(ProcessId src,int accept_stamp,String serverID,int csn) {
 		this.src=src;this.accept_stamp=accept_stamp;this.serverID=serverID;this.CSN=csn;
 	}
+	public String toString(){
+		return "CommitNotification("+accept_stamp+","+serverID+","+CSN+")";
+	}
 }
 class WriteMessage extends BayouMessage{
 	Write w;
 	WriteMessage(ProcessId src, Write w){
 		this.src=src;this.w=w;
+	}
+	public String toString(){
+		return "WriteMessage("+w+")";
 	}
 }
 class FailureToSendMessage extends BayouMessage{

@@ -11,15 +11,16 @@ public class Node extends Process{
 	int node_id;
 	String server_id;
 	int CSN=0; //TODO make sure this init is right
+	int old_CSN=-1;
 	int accept_stamp=0;
 	HashMap<String,Integer> version_vector = new HashMap<String,Integer>(); 
+	HashMap<String,Integer> old_version_vector = null;
 	Set<Write> tentativeWrites = new TreeSet<Write>();
 	Set<Write> committedWrites = new TreeSet<Write>();
 	Boolean exitFlag = false;
 	Boolean exitOnNextAntientropy = false;
 	Boolean isPrimary;
 	Boolean acceptingClientRequests=true;
-	Boolean newInformation = true;
 	PlayList db;
 
 	final int inf = 99999;
@@ -50,7 +51,7 @@ public class Node extends Process{
 
 	private void executeClientRequests() {
 		// TODO handle buffered client requests
-		
+
 	}
 
 	int CompleteV(HashMap<String,Integer> r_versionVector, String w_serverID){
@@ -70,7 +71,8 @@ public class Node extends Process{
 	}
 
 	public void anti_entropy(ProcessId R, HashMap<String,Integer> r_versionVector, int r_csn, String r_server_id){
-		//System.out.println(me+" doing anti_entropy with "+R+"\n"+"my vv "+version_vector + " his "+r_versionVector);
+		//System.out.println(me+" doing anti_entropy with "+R+"\n"+"my vv "+version_vector + " his vv "+r_versionVector);
+		//printLog();
 		if(r_csn<CSN){
 			Iterator<Write> it = committedWrites.iterator(); 
 			while(it.hasNext()){
@@ -108,7 +110,7 @@ public class Node extends Process{
 	}
 
 	public void printLog(){
-		System.out.println(server_id+" accept_stamp= "+accept_stamp+" CSN="+CSN+"\nCommited Writelog for "+server_id+":"+committedWrites+"\n"+"Tentative Writelog for "+me+":"+tentativeWrites);
+		System.out.println(server_id+" accept_stamp= "+accept_stamp+" CSN="+CSN+"\nCommited Writelog for "+server_id+":"+committedWrites+"\n"+"Tentative Writelog for "+server_id+":"+tentativeWrites + " version_vector "+version_vector);
 		System.out.flush();
 		/*System.out.println("Log for "+me+":");
 		for(Write w:committedWrites)
@@ -153,15 +155,27 @@ public class Node extends Process{
 				deliver(m);
 		}
 
-		newInformation = true;
 		while(!exitFlag){
 			//printLog();
 			//delay(500);
-			if(inbox.ll.isEmpty() && newInformation){ //TODO set newInformation to false when there is nothing
-				delay(2000);
-				//TODO send only if version vector has changed since last execution
-				for(ProcessId nodeid: env.Nodes.nodes){
-					sendMessage(nodeid, new askAntiEntropyInfo(me));
+			if(inbox.ll.isEmpty()){ 
+				Boolean newInformation = false; //TODO set newInformation to false when there is nothing
+				if(old_version_vector==null){
+					newInformation = true;
+				} else if(!old_version_vector.equals(version_vector)){
+					newInformation = true;
+				} else if(CSN==old_CSN){
+					newInformation = true;
+				}
+
+				if(newInformation){
+					old_version_vector = (HashMap<String, Integer>) version_vector.clone();
+					old_CSN = CSN;
+					delay(2000);
+					//TODO send only if version vector has changed since last execution
+					for(ProcessId nodeid: env.Nodes.nodes){
+						sendMessage(nodeid, new askAntiEntropyInfo(me));
+					}
 				}
 			}
 			//TODO current code sends too many askAntiEntropy. Just send one and wait for a round of responses. Then send another. Maybe send one when you receive a response, or have new info to send
@@ -224,6 +238,7 @@ public class Node extends Process{
 				}
 				else{
 					if(isNewMsg(msg)){
+						//TODO do we always commit right away?
 						if(version_vector.containsKey(msg.w.serverID)){
 							version_vector.put(msg.w.serverID, msg.w.accept_stamp);
 							CSN++; msg.w.CSN=CSN;
@@ -234,7 +249,8 @@ public class Node extends Process{
 				if(msg.w.command.split(";")[0].equals("creation")){
 					String new_server_id = msg.w.command.split(";")[2];
 					int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
-					version_vector.put(new_server_id, accept_stamp);
+					if(!version_vector.containsKey(new_server_id))
+						version_vector.put(new_server_id, accept_stamp);
 				}
 				else if(msg.w.command.split(";")[0].equals("retire")){
 					//TODO handle case where write is a retirement write
@@ -285,20 +301,21 @@ public class Node extends Process{
 			executeClientRequests();
 		}
 	}
-	private void commitTentativeWrite(int accept_stamp, String serverID, int csn) {
-		if(CSN>=csn)
+	private void commitTentativeWrite(int sw_accept_stamp, String sw_serverID, int sw_csn) {
+		System.out.println(server_id + " trying commitTentativeWrite for ("+sw_accept_stamp+","+sw_serverID+","+sw_csn+")");
+		if(CSN>=sw_csn)
 			return;
 		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
-			if(tw.accept_stamp==accept_stamp){
-				if(tw.serverID.equals(serverID)){
+			if(tw.accept_stamp==sw_accept_stamp){
+				if(tw.serverID.equals(sw_serverID)){
 					System.err.println(server_id +" Committing tentative write "+tw);
-					if(csn!=CSN+1)
+					if(sw_csn!=CSN+1)
 						System.err.println("CSN is more than it should be");
 					else{
-						CSN=csn;
-						committedWrites.add(new Write(serverID,accept_stamp,csn,tw.command));
+						CSN=sw_csn;
+						committedWrites.add(new Write(sw_serverID,sw_accept_stamp,sw_csn,tw.command));
 						db.execute(tw.command);
 						executeClientRequests();
 						it.remove();
