@@ -136,7 +136,7 @@ public class Node extends Process{
 
 	@Override
 	void body() {
-		System.out.println("Here I am: " + me);
+		System.err.println("Here I am: " + me);
 
 		if(isPrimary){
 			//Entering an empty environment.
@@ -147,7 +147,7 @@ public class Node extends Process{
 			boolean sentMessage=false;
 			while(!sentMessage){
 				for(ProcessId nodeid: env.Nodes.nodes){
-					if(nodeid!=null){
+					if(nodeid!=null && nodeid!=me){
 						sendMessage(nodeid, new CreationMessage(me));
 						sentMessage=true;
 						break;
@@ -215,8 +215,9 @@ public class Node extends Process{
 				CreationMessage msg = (CreationMessage) m;
 				sendMessage(msg.src, new ServerIDMessage(me, accept_stamp+":"+server_id,server_id));
 				String new_server_id = accept_stamp+":"+server_id;
-				version_vector.put(new_server_id,accept_stamp);
+				version_vector.put(new_server_id,-inf);
 				add_entry("creation;"+msg.src.name+";"+new_server_id, -1, -1);
+				System.err.println(me+" created a node and my accept stamp is "+accept_stamp);
 				System.out.println(me+" assigned server_id "+new_server_id+" to "+msg.src);
 			}
 			else if(m instanceof UpdateMessage){
@@ -262,7 +263,7 @@ public class Node extends Process{
 					String new_server_id = msg.w.command.split(";")[2];
 					int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
 					if(!version_vector.containsKey(new_server_id))
-						version_vector.put(new_server_id, accept_stamp);
+						version_vector.put(new_server_id, -inf);
 				}
 				else if(msg.w.command.split(";")[0].equals("retire")){
 					String retiring_server_id = msg.w.command.split(";")[2];
