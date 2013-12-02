@@ -76,10 +76,9 @@ public class Node extends Process{
 				if(cw.CSN>r_csn){
 					int r_accept_stamp = CompleteV(r_versionVector,cw.serverID);
 					//System.err.println(r_server_id+" had accept stamp in anti entropy "+r_accept_stamp);
-					if(r_accept_stamp<inf){
 						if(cw.accept_stamp<=r_accept_stamp)
 							sendMessage(R,new CommitNotification(me, cw.accept_stamp, cw.serverID, cw.CSN));
-						else
+						else if(r_accept_stamp<inf){
 							sendMessage(R, new WriteMessage(me, cw));
 					}
 				}
@@ -97,15 +96,18 @@ public class Node extends Process{
 
 		if(exitOnNextAntientropy)
 		{
-			sendMessage(me, new endOfAntiEntropy(me));
+			sendMessage(R, new endOfAntiEntropy(me));
 			ArrayList<BayouMessage> pendingMessages = new ArrayList<BayouMessage>();
 			long start = System.currentTimeMillis();
 			while(System.currentTimeMillis() - start <1000L){
 				BayouMessage msg1 = getNextMessage(1000L);
 				if(msg1 instanceof ACK){
-					if(isPrimary)
-						sendMessage(me, new YouArePrimaryMessage(me)); //TODO but ACK for this?
+					if(isPrimary){
+						System.err.println(msg1.src+" is the new primary");
+						sendMessage(msg1.src, new YouArePrimaryMessage(me)); //TODO but ACK for this?
+					}
 					exitFlag = true;
+					printLog();
 					break;
 				} else if(msg1==null){
 
@@ -270,6 +272,7 @@ public class Node extends Process{
 			else if(m instanceof YouArePrimaryMessage){
 				isPrimary=true;
 				commitAllTentativeWrites();
+				System.err.println(node_id+" is the new Primary");
 			}
 			else if(m instanceof WIDQuery){
 				WIDQuery msg = (WIDQuery) m;
@@ -335,13 +338,14 @@ public class Node extends Process{
 			Write tw = it.next();
 			if(tw.accept_stamp==sw_accept_stamp){
 				if(tw.serverID.equals(sw_serverID)){
-					System.err.println(server_id +" Committing tentative write "+tw);
+					//System.err.println(server_id +" Committing tentative write "+tw);
 					if(sw_csn!=CSN+1)
 						System.err.println("CSN is more than it should be");
 					else{
 						CSN=sw_csn;
 						committedWrites.add(new Write(sw_serverID,sw_accept_stamp,sw_csn,tw.command, tw.wid, tw.client_id));
 						it.remove();
+						System.err.println("Committed write "+tw);
 						if(tw.command.split(";")[0].equals("creation") || tw.command.split(";")[0].equals("retire"))
 							return;
 						db.execute(tw.command);
