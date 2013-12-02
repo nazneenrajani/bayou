@@ -41,7 +41,7 @@ public class ConnectionMatrix {
 	public void breakConnection(int i, int j){
 		connections[i][j]=false;
 		connections[j][i]=false;
-		System.err.println(i+" and "+j+" are disconencted");	
+		System.err.println(i+" and "+j+" are disconnected");	
 	}
 
 	public void recoverConnection(int i, int j){

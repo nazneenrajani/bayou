@@ -91,6 +91,10 @@ public class Env {
 			else
 				for(ProcessId nodeid : Nodes.nodes){
 					sendMessage(nodeid, new PrintLogMessage(me));
+					/*if(nodeid!=null){
+						Node n = (Node) procs.get(nodeid);
+					n.printLog();
+					}*/
 				}
 			break;
 		case "pause":

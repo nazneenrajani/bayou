@@ -74,12 +74,16 @@ public class Node extends Process{
 			while(it.hasNext()){
 				Write cw = it.next();
 				if(cw.CSN>r_csn){
-					int r_accept_stamp = CompleteV(r_versionVector,cw.serverID);
-					//System.err.println(r_server_id+" had accept stamp in anti entropy "+r_accept_stamp);
+					if(r_csn==0 && cw.CSN==1)
+						sendMessage(R, new WriteMessage(me,cw));
+					else{
+						int r_accept_stamp = CompleteV(r_versionVector,cw.serverID);
+						//System.err.println(r_server_id+" had accept stamp in anti entropy "+r_accept_stamp);
 						if(cw.accept_stamp<=r_accept_stamp)
 							sendMessage(R,new CommitNotification(me, cw.accept_stamp, cw.serverID, cw.CSN));
 						else if(r_accept_stamp<inf){
 							sendMessage(R, new WriteMessage(me, cw));
+						}
 					}
 				}
 			}
@@ -162,6 +166,7 @@ public class Node extends Process{
 					server_id = msg.server_id;
 					accept_stamp = Integer.parseInt(server_id.split(":")[0]);
 					System.out.println(me+" was assigned server_id "+server_id);
+					version_vector.put(server_id,accept_stamp);
 					version_vector.put(msg.parent_id,-inf);
 					break;
 				}
@@ -173,10 +178,10 @@ public class Node extends Process{
 		}
 
 		while(!exitFlag){
-			//printLog();
+			printLog();
 			//delay(500);
 			if(inbox.ll.isEmpty()){ 
-				Boolean newInformation = false;
+				Boolean newInformation = true;
 				if(old_version_vector==null){
 					newInformation = true;
 				} else if(!old_version_vector.equals(version_vector)){
@@ -248,26 +253,36 @@ public class Node extends Process{
 							else
 								commitNewWrite(msg.w);
 						}
+						if(msg.w.command.split(";")[0].equals("creation")){
+							String new_server_id = msg.w.command.split(";")[2];
+							int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
+							if(!version_vector.containsKey(new_server_id))
+								version_vector.put(new_server_id, -inf);
+						}
+						else if(msg.w.command.split(";")[0].equals("retire")){
+							String retiring_server_id = msg.w.command.split(";")[2];
+							version_vector.remove(retiring_server_id);
+						}
 					}
 				}
 				else{
 					if(isNewMsg(msg)){
 						if(version_vector.containsKey(msg.w.serverID)){
 							version_vector.put(msg.w.serverID, msg.w.accept_stamp);
-							CSN++; msg.w.CSN=CSN;
-							committedWrites.add(msg.w);
+							CSN++;
+							committedWrites.add(new Write(msg.w.serverID,msg.w.accept_stamp,CSN,msg.w.command,msg.w.client_id,msg.w.wid));
+						}
+						if(msg.w.command.split(";")[0].equals("creation")){
+							String new_server_id = msg.w.command.split(";")[2];
+							int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
+							if(!version_vector.containsKey(new_server_id))
+								version_vector.put(new_server_id, -inf);
+						}
+						else if(msg.w.command.split(";")[0].equals("retire")){
+							String retiring_server_id = msg.w.command.split(";")[2];
+							version_vector.remove(retiring_server_id);
 						}
 					}
-				}
-				if(msg.w.command.split(";")[0].equals("creation")){
-					String new_server_id = msg.w.command.split(";")[2];
-					int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
-					if(!version_vector.containsKey(new_server_id))
-						version_vector.put(new_server_id, -inf);
-				}
-				else if(msg.w.command.split(";")[0].equals("retire")){
-					String retiring_server_id = msg.w.command.split(";")[2];
-					version_vector.remove(retiring_server_id);
 				}
 			}
 			else if(m instanceof YouArePrimaryMessage){
@@ -315,12 +330,14 @@ public class Node extends Process{
 	}
 
 	private void commitNewWrite(Write r_w){
-		System.err.println(server_id+" commitNewWrite "+r_w);
+		printLog();
 		if(CSN>=r_w.CSN)
 			return;
 		if(r_w.CSN!=CSN+1)
-			System.err.println("CSN is more than it should be");
+			//System.err.println("CSN is more than it should be");
+			;
 		else{
+			System.err.println(server_id+" commitNewWrite "+r_w);
 			committedWrites.add(r_w);
 			CSN=r_w.CSN;
 			version_vector.put(r_w.serverID, r_w.accept_stamp);
@@ -331,7 +348,7 @@ public class Node extends Process{
 	}
 
 	private void commitTentativeWrite(int sw_accept_stamp, String sw_serverID, int sw_csn) {
-		System.out.println(server_id + " trying commitTentativeWrite for ("+sw_accept_stamp+","+sw_serverID+","+sw_csn+")");
+		//System.out.println(server_id + " trying commitTentativeWrite for ("+sw_accept_stamp+","+sw_serverID+","+sw_csn+")");
 		if(CSN>=sw_csn)
 			return;
 		Iterator<Write> it = tentativeWrites.iterator(); 
@@ -346,7 +363,7 @@ public class Node extends Process{
 						CSN=sw_csn;
 						committedWrites.add(new Write(sw_serverID,sw_accept_stamp,sw_csn,tw.command, tw.wid, tw.client_id));
 						it.remove();
-						System.err.println("Committed write "+tw);
+						System.err.println("Committed tentative write "+tw);
 						if(tw.command.split(";")[0].equals("creation") || tw.command.split(";")[0].equals("retire"))
 							return;
 						db.execute(tw.command);
