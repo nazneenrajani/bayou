@@ -27,12 +27,12 @@ public class Client extends Process {
 					BayouMessage msg1 = getNextMessage();
 					if(msg1 instanceof WIDMsg){
 						WIDMsg m1 = (WIDMsg) msg1;
-						if((m1.WID==0 && wid==0) || m1.WID+1==wid){
+						if((m1.WID==0 && wid==0) || m1.WID==wid){
 							wid++;
 							sendMessage(m.dst, new UpdateMessage(me, m.updateStr,wid, client_id));
 							break;
 						} else{
-							System.err.println("Server not up to date. Server_wid="+m1.WID+" My wid="+wid);
+							System.err.println("Server not up to date. nodeID is: "+m1.src+" and Server_wid="+m1.WID+" My wid="+wid+" at clientID: "+client_id+" and command is: "+m.updateStr);
 							//TODO maybe do roundrobin
 							break;
 						}
@@ -58,6 +58,7 @@ public class Client extends Process {
 							break;
 						} else{
 							//TODO maybe do roundrobin
+							System.err.println("Server not up to date. nodeID is: "+m1.src+" and Server_wid="+m1.WID+" My wid="+wid+" at clientID: "+client_id+" and command is: "+m.songName);
 							break;
 						}
 					}
@@ -71,7 +72,7 @@ public class Client extends Process {
 			}
 			else if(msg instanceof ResponseMessage){
 				ResponseMessage m = (ResponseMessage) msg;
-				System.err.println("Received response "+m.response+" from "+m.src);
+				System.err.println("Received response "+m.response+" from "+m.src+" at client: "+client_id);
 			}
 		}
 	}

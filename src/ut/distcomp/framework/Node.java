@@ -38,7 +38,10 @@ public class Node extends Process{
 		if(isPrimary){
 			CSN++; accept_stamp++;
 			committedWrites.add(new Write(server_id, accept_stamp, CSN, command, wid, client_id));
-			db.execute(command);
+			if(command.split(";")[0].equals("creation") || command.split(";")[0].equals("retire"))
+				;
+			else
+				db.execute(command);
 		}
 		else{
 			accept_stamp++;
@@ -72,6 +75,7 @@ public class Node extends Process{
 				Write cw = it.next();
 				if(cw.CSN>r_csn){
 					int r_accept_stamp = CompleteV(r_versionVector,cw.serverID);
+					//System.err.println(r_server_id+" had accept stamp in anti entropy "+r_accept_stamp);
 					if(r_accept_stamp<inf){
 						if(cw.accept_stamp<=r_accept_stamp)
 							sendMessage(R,new CommitNotification(me, cw.accept_stamp, cw.serverID, cw.CSN));
@@ -104,7 +108,7 @@ public class Node extends Process{
 					exitFlag = true;
 					break;
 				} else if(msg1==null){
-					
+
 				}
 				else{
 					pendingMessages.add(msg1);
@@ -118,6 +122,7 @@ public class Node extends Process{
 
 	public void retire(){
 		acceptingClientRequests=false;
+		System.err.println(me+" got retirement command and no longer accepting client requests");
 		add_entry("retire;"+me+";"+server_id, -1, -1);
 		exitOnNextAntientropy=true;
 	}
@@ -277,6 +282,7 @@ public class Node extends Process{
 				sendMessage(msg.src, new WIDMsg(me, max_wid));
 			}
 			else if(m instanceof endOfAntiEntropy){
+				//TODO: check for simulataneous retiring and then send ACK
 				sendMessage(m.src, new ACK(me));
 			}
 		}
@@ -314,10 +320,12 @@ public class Node extends Process{
 			committedWrites.add(r_w);
 			CSN=r_w.CSN;
 			version_vector.put(r_w.serverID, r_w.accept_stamp);
+			if(r_w.command.split(";")[0].equals("creation") || r_w.command.split(";")[0].equals("retire"))
+				return;
 			db.execute(r_w.command);
 		}
 	}
-	
+
 	private void commitTentativeWrite(int sw_accept_stamp, String sw_serverID, int sw_csn) {
 		System.out.println(server_id + " trying commitTentativeWrite for ("+sw_accept_stamp+","+sw_serverID+","+sw_csn+")");
 		if(CSN>=sw_csn)
@@ -333,14 +341,16 @@ public class Node extends Process{
 					else{
 						CSN=sw_csn;
 						committedWrites.add(new Write(sw_serverID,sw_accept_stamp,sw_csn,tw.command, tw.wid, tw.client_id));
-						db.execute(tw.command);
 						it.remove();
+						if(tw.command.split(";")[0].equals("creation") || tw.command.split(";")[0].equals("retire"))
+							return;
+						db.execute(tw.command);
 					}
 				}
 			}
 		}
 	}
-	
+
 	void commitAllTentativeWrites(){
 		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
