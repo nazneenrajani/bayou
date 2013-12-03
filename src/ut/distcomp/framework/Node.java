@@ -168,6 +168,7 @@ public class Node extends Process{
 					version_vector.put(server_id,accept_stamp);
 					version_vector.put(msg.parent_id,-inf);
 					gotId=true;
+					sendMessage(msg.src,new ACK(me));
 					break;
 				}
 				else
@@ -234,11 +235,27 @@ public class Node extends Process{
 				CreationMessage msg = (CreationMessage) m;
 				sendMessage(msg.src, new ServerIDMessage(me, accept_stamp+":"+server_id,server_id));
 				String new_server_id = accept_stamp+":"+server_id;
-				version_vector.put(new_server_id,-inf);
-				add_entry("creation;"+msg.src.name+";"+new_server_id, -1, -1);
-				System.err.println(me+" created a node and my accept stamp is "+accept_stamp);
-				System.out.println(me+" assigned server_id "+new_server_id+" to "+msg.src);
-				sendParentState(msg.src);
+				ArrayList<BayouMessage> pendingMessages = new ArrayList<BayouMessage>();
+				long start = System.currentTimeMillis();
+				while(System.currentTimeMillis() - start <1000L){
+					BayouMessage msg1 = getNextMessage(1000L);
+					if(msg1 instanceof ACK){
+						version_vector.put(new_server_id,-inf);
+						add_entry("creation;"+msg.src.name+";"+new_server_id, -1, -1);
+						System.err.println(me+" created a node and my accept stamp is "+accept_stamp);
+						System.out.println(me+" assigned server_id "+new_server_id+" to "+msg.src);
+						sendParentState(msg.src);
+						break;
+					} else if(msg1==null){
+
+					}
+					else{
+						pendingMessages.add(msg1);
+					}
+				}
+				for(BayouMessage m2:pendingMessages){
+					deliver(m2);
+				}
 			}
 			else if(m instanceof UpdateMessage){
 				UpdateMessage msg = (UpdateMessage) m;
@@ -294,14 +311,15 @@ public class Node extends Process{
 							if(msg.w.command.split(";")[0].equals("creation")){
 								String new_server_id = msg.w.command.split(";")[2];
 								int accept_stamp = Integer.parseInt(new_server_id.split(":")[0]);
+								System.err.println(server_id + "creating "+new_server_id);
 								if(!version_vector.containsKey(new_server_id))
 									version_vector.put(new_server_id, -inf);
 							}
-							//TODO accept retirement writes only in order
 							else if(msg.w.command.split(";")[0].equals("retire")){
 								String retiring_server_id = msg.w.command.split(";")[2];
 								version_vector.remove(retiring_server_id);
 							}
+							//TODO accept retirement writes only in order
 						}
 					}
 					else{
@@ -309,7 +327,7 @@ public class Node extends Process{
 							if(version_vector.containsKey(msg.w.serverID)){
 								version_vector.put(msg.w.serverID, msg.w.accept_stamp);
 								CSN++;
-								committedWrites.add(new Write(msg.w.serverID,msg.w.accept_stamp,CSN,msg.w.command,msg.w.client_id,msg.w.wid));
+								committedWrites.add(new Write(msg.w.serverID,msg.w.accept_stamp,CSN,msg.w.command,msg.w.wid,msg.w.client_id));
 							}
 							if(msg.w.command.split(";")[0].equals("creation")){
 								String new_server_id = msg.w.command.split(";")[2];
@@ -334,7 +352,8 @@ public class Node extends Process{
 				WIDQuery msg = (WIDQuery) m;
 				int max_wid=0;
 				for(Write w: committedWrites){
-					if(w.client_id==msg.client_id && w.wid > max_wid){
+					if(w.client_id==msg.client_id){
+						if(w.wid>max_wid)
 						max_wid = w.wid;
 					}
 				}
@@ -353,12 +372,12 @@ public class Node extends Process{
 		Iterator<Write> itc = committedWrites.iterator(); 
 		while(itc.hasNext()){
 			Write cw = itc.next();
-			sendMessage(src, new WriteMessage(me, new Write(cw.serverID, cw.accept_stamp, cw.CSN, cw.command, cw.client_id, cw.wid, true)));
+			sendMessage(src, new WriteMessage(me, new Write(cw.serverID, cw.accept_stamp, cw.CSN, cw.command, cw.wid, cw.client_id, true)));
 		}
 		Iterator<Write> it = tentativeWrites.iterator(); 
 		while(it.hasNext()){
 			Write tw = it.next();
-			sendMessage(src, new WriteMessage(me, new Write(tw.serverID, tw.accept_stamp, tw.CSN, tw.command, tw.client_id, tw.wid, true)));
+			sendMessage(src, new WriteMessage(me, new Write(tw.serverID, tw.accept_stamp, tw.CSN, tw.command, tw.wid, tw.client_id, true)));
 		}
 
 	}
@@ -384,7 +403,7 @@ public class Node extends Process{
 	}
 
 	private void commitNewWrite(Write r_w){
-		printLog();
+		//printLog();
 		if(CSN>=r_w.CSN)
 			return;
 		if(r_w.CSN!=CSN+1)

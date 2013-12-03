@@ -32,6 +32,7 @@ public class Client extends Process {
 							WIDMsg m1 = (WIDMsg) msg1;
 							if((m1.WID==0 && wid==0) || m1.WID==wid){
 								wid++;
+								System.err.println("client_id "+client_id+" wid "+wid);
 								sendMessage(m.dst, new UpdateMessage(me, m.updateStr,wid, client_id));
 								isBreak=true;
 								break;
