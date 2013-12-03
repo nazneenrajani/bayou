@@ -51,6 +51,7 @@ public class Env {
 	}
 
 	private void process(InputCommand command) {
+		//delay(500);
 		System.out.println("processing "+command);
 		switch(command.command){
 		case "join":
