@@ -1,0 +1,16 @@
+join(1)
+join(2)
+join(3)
+delay(10000)
+isolate(1)
+isolate(2)
+isolate(3)
+printLog
+clientConnect(1,2)
+clientConnect(2,3)
+update(2,add[a;1])
+update(1,add[a;3])
+update(1,add[b;2])
+delay(5000)
+printLog
+pause

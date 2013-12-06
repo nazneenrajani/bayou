@@ -125,8 +125,16 @@ public class Node extends Process{
 	}
 
 	public void printLog(){
-		System.out.println(server_id+" accept_stamp= "+accept_stamp+" CSN="+CSN+"\nCommited Writelog for "+server_id+":"+committedWrites+"\n"+"Tentative Writelog for "+server_id+":"+tentativeWrites + " version_vector "+version_vector);
+		System.out.println(server_id+" accept_stamp= "+accept_stamp+" CSN="+CSN+"\nCommited Writelog for "+server_id+":"+print(committedWrites)+"\n"+"Tentative Writelog for "+server_id+":"+print(tentativeWrites) + " version_vector "+version_vector);
 		System.out.flush();
+	}
+
+	private String print(Set<Write> committedWrites2) {
+		String r="[\n";
+		for(Write w: committedWrites2){
+			r+=w.toString()+"\n";
+		}
+		return r+"]";
 	}
 
 	@Override
